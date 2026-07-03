@@ -1,0 +1,305 @@
+// Akane Hub — CRM / 案件管理 / 売上管理 統合システム
+// マルチテナント: 全業務データは Organization (テナント) に属する。
+// SQLite は enum 非対応のため区分値は String + src/lib/constants.ts の定数で管理する。
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ===== テナント・ユーザー =====
+
+model Organization {
+  id           String   @id @default(cuid())
+  name         String
+  baseCurrency String   @default("JPY") // ダッシュボード集計時の基準通貨
+  fxRates      String   @default("{\"AUD\":95,\"USD\":150}") // 基準通貨への換算レート JSON
+  settings     String   @default("{}") // 機能カスタマイズ用 JSON
+  createdAt    DateTime @default(now())
+
+  memberships       Membership[]
+  invitations       Invitation[]
+  services          Service[]
+  customers         Customer[]
+  deals             Deal[]
+  contracts         Contract[]
+  monthlyValues     MonthlyValue[]
+  expenseCategories ExpenseCategory[]
+  activities        Activity[]
+  customFieldDefs   CustomFieldDef[]
+  dataSources       DataSource[]
+  datasets          Dataset[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  memberships Membership[]
+  activities  Activity[]
+}
+
+model Membership {
+  id     String @id @default(cuid())
+  userId String
+  orgId  String
+  role   String @default("MEMBER") // OWNER | ADMIN | MEMBER
+
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, orgId])
+}
+
+model Invitation {
+  id         String    @id @default(cuid())
+  orgId      String
+  email      String
+  role       String    @default("MEMBER")
+  token      String    @unique @default(cuid())
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+}
+
+// ===== サービス・プランマスタ =====
+
+model Service {
+  id        String  @id @default(cuid())
+  orgId     String
+  name      String // 例: SNS運用 / サイト制作 / human-hub / tour-hub
+  category  String  @default("OTHER") // SNS | WEB | SAAS | OTHER
+  color     String  @default("#6366f1") // グラフ・バッジ表示色
+  sortOrder Int     @default(0)
+  archived  Boolean @default(false)
+
+  org           Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  plans         Plan[]
+  deals         Deal[]
+  contracts     Contract[]
+  monthlyValues MonthlyValue[]
+}
+
+model Plan {
+  id         String  @id @default(cuid())
+  serviceId  String
+  name       String // 例: Plan A / Plan B / Pro
+  currency   String  @default("AUD") // JPY | AUD
+  initialFee Float   @default(0)
+  monthlyFee Float   @default(0)
+  active     Boolean @default(true)
+  sortOrder  Int     @default(0)
+
+  service   Service    @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  deals     Deal[]
+  contracts Contract[]
+}
+
+// ===== CRM =====
+
+model Customer {
+  id         String   @id @default(cuid())
+  orgId      String
+  name       String
+  country    String   @default("JP") // JP | AU | OTHER
+  status     String   @default("LEAD") // LEAD | PROSPECT | ACTIVE | CHURNED
+  industry   String? // 業種 (カフェ・サロン等)
+  email      String?
+  phone      String?
+  instagram  String?
+  website    String?
+  address    String?
+  tags       String   @default("") // カンマ区切り
+  memo       String?
+  customData String   @default("{}") // カスタム項目値 JSON
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  org        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  contacts   Contact[]
+  deals      Deal[]
+  contracts  Contract[]
+  activities Activity[]
+}
+
+model Contact {
+  id         String  @id @default(cuid())
+  customerId String
+  name       String
+  role       String?
+  email      String?
+  phone      String?
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+}
+
+model Activity {
+  id         String   @id @default(cuid())
+  orgId      String
+  customerId String?
+  dealId     String?
+  userId     String?
+  type       String   @default("NOTE") // NOTE | CALL | MEETING | EMAIL | TASK
+  content    String
+  occurredAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  org      Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  customer Customer?    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  deal     Deal?        @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  user     User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+// ===== 案件管理 =====
+
+model Deal {
+  id                String    @id @default(cuid())
+  orgId             String
+  customerId        String
+  title             String
+  stage             String    @default("LEAD") // LEAD | NEGOTIATION | PROPOSAL | WON | LOST
+  serviceId         String?
+  planId            String?
+  currency          String    @default("JPY")
+  initialFee        Float     @default(0)
+  monthlyFee        Float     @default(0)
+  probability       Int       @default(50) // 受注確度 %
+  expectedCloseDate DateTime?
+  closedAt          DateTime?
+  lostReason        String?
+  memo              String?
+  sortOrder         Int       @default(0)
+  customData        String    @default("{}")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  org        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  customer   Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  service    Service?     @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  plan       Plan?        @relation(fields: [planId], references: [id], onDelete: SetNull)
+  activities Activity[]
+  contracts  Contract[]
+}
+
+// ===== 契約 (受注案件 → 月次売上の自動計算元) =====
+
+model Contract {
+  id         String    @id @default(cuid())
+  orgId      String
+  customerId String
+  dealId     String?
+  serviceId  String
+  planId     String?
+  name       String
+  currency   String    @default("JPY")
+  initialFee Float     @default(0) // 開始月に計上
+  monthlyFee Float     @default(0) // 開始月〜終了月に毎月計上
+  startDate  DateTime
+  endDate    DateTime? // null = 継続中
+  status     String    @default("ACTIVE") // ACTIVE | ENDED
+  memo       String?
+  createdAt  DateTime  @default(now())
+
+  org      Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  customer Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  deal     Deal?        @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  service  Service      @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  plan     Plan?        @relation(fields: [planId], references: [id], onDelete: SetNull)
+}
+
+// ===== 売上管理 (手入力・上書き・経費) =====
+
+model ExpenseCategory {
+  id        String @id @default(cuid())
+  orgId     String
+  name      String // 人件費・外注費 / 広告宣伝費 など
+  sortOrder Int    @default(0)
+
+  org           Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  monthlyValues MonthlyValue[]
+}
+
+// 月次グリッドのセル値。
+// type=REVENUE_OVERRIDE: サービス別自動計算値の手動上書き (serviceId 必須)
+// type=REVENUE_MANUAL:   自由行の手入力売上 (label 必須)
+// type=EXPENSE:          経費 (expenseCategoryId 必須)
+model MonthlyValue {
+  id                String  @id @default(cuid())
+  orgId             String
+  month             String // "2026-07" 形式
+  type              String
+  serviceId         String?
+  expenseCategoryId String?
+  label             String?
+  amount            Float
+  memo              String?
+
+  org             Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  service         Service?         @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  expenseCategory ExpenseCategory? @relation(fields: [expenseCategoryId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, month])
+}
+
+// ===== カスタム項目定義 =====
+
+model CustomFieldDef {
+  id        String @id @default(cuid())
+  orgId     String
+  entity    String // customer | deal
+  key       String
+  label     String
+  type      String @default("text") // text | number | date | select
+  options   String @default("[]") // select 用選択肢 JSON
+  sortOrder Int    @default(0)
+
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, entity, key])
+}
+
+// ===== データ連携 (GA / MCP 等の受け皿) =====
+
+model DataSource {
+  id        String   @id @default(cuid())
+  orgId     String
+  name      String
+  type      String   @default("MANUAL") // MANUAL | GA4 | CSV | MCP
+  config    String   @default("{}")
+  createdAt DateTime @default(now())
+
+  org      Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  datasets Dataset[]
+}
+
+model Dataset {
+  id        String   @id @default(cuid())
+  orgId     String
+  sourceId  String?
+  name      String
+  columns   String   @default("[]") // [{key,label,type}] JSON
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  source DataSource?  @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  rows   DataRow[]
+}
+
+model DataRow {
+  id        String @id @default(cuid())
+  datasetId String
+  rowIndex  Int    @default(0)
+  data      String @default("{}") // 列key→値 JSON
+
+  dataset Dataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+}

@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@theme {
+  /* 茜色 (AKANE) を基調としたブランドカラー */
+  --color-akane-50: #fdf2f2;
+  --color-akane-100: #fbe3e4;
+  --color-akane-200: #f8cbcd;
+  --color-akane-300: #f1a5a9;
+  --color-akane-400: #e77378;
+  --color-akane-500: #d8474e;
+  --color-akane-600: #b7282e;
+  --color-akane-700: #a3232a;
+  --color-akane-800: #872025;
+  --color-akane-900: #712025;
+  --color-akane-950: #3d0c0f;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+  font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic UI",
+    "Meiryo", system-ui, -apple-system, sans-serif;
+  font-feature-settings: "palt";
+}
+
+/* 数値セル用の等幅数字 */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-slate-300;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
