@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireSession, isAdmin } from "@/lib/auth";
+import { CURRENCIES } from "@/lib/constants";
 
 async function requireAdmin() {
   const session = await requireSession();
@@ -16,18 +17,22 @@ export async function updateOrg(formData: FormData) {
   const session = await requireAdmin();
   const name = String(formData.get("name") ?? "").trim();
   const baseCurrency = String(formData.get("baseCurrency") ?? "JPY");
-  const audRate = Number(formData.get("audRate") ?? 0);
-  const usdRate = Number(formData.get("usdRate") ?? 0);
+  if (!CURRENCIES.includes(baseCurrency as (typeof CURRENCIES)[number])) return;
+
+  // 基準通貨以外の全通貨について「1 通貨 = X 基準通貨」のレートを保存する
+  const fxRates: Record<string, number> = {};
+  for (const c of CURRENCIES) {
+    if (c === baseCurrency) continue;
+    const rate = Number(formData.get(`rate_${c}`) ?? 0);
+    fxRates[c] = Number.isFinite(rate) && rate > 0 ? rate : 1;
+  }
 
   await db.organization.update({
     where: { id: session.org.id },
     data: {
       ...(name ? { name } : {}),
       baseCurrency,
-      fxRates: JSON.stringify({
-        AUD: Number.isFinite(audRate) && audRate > 0 ? audRate : 1,
-        USD: Number.isFinite(usdRate) && usdRate > 0 ? usdRate : 1,
-      }),
+      fxRates: JSON.stringify(fxRates),
     },
   });
   revalidatePath("/", "layout");

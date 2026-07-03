@@ -1,9 +1,10 @@
 // デモデータ投入: demo@akane.studio / akane1234 でログイン可能
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
+import { createClient } from "@supabase/supabase-js";
 import { createOrganizationWithDefaults } from "../src/lib/bootstrap";
 
-const db = new PrismaClient();
+// RLS をバイパスできるオーナー接続で投入する
+const db = new PrismaClient({ datasourceUrl: process.env.DIRECT_URL });
 
 function ym(offset: number): Date {
   const now = new Date();
@@ -17,11 +18,25 @@ async function main() {
     return;
   }
 
+  // Supabase Auth 上にデモユーザーを作成し、同じ id でプロフィール行を作る
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+  const { data: authUser, error } = await supabaseAdmin.auth.admin.createUser({
+    email: "demo@akane.studio",
+    password: "akane1234",
+    email_confirm: true,
+    user_metadata: { name: "Shotaro Nakaebisu" },
+  });
+  if (error) throw new Error(`Supabase Auth ユーザー作成に失敗: ${error.message}`);
+
   const user = await db.user.create({
     data: {
+      id: authUser.user.id,
       email: "demo@akane.studio",
       name: "Shotaro Nakaebisu",
-      passwordHash: await bcrypt.hash("akane1234", 10),
     },
   });
   const org = await createOrganizationWithDefaults("AKANE WEB STUDIO", user.id);

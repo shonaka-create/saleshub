@@ -1,14 +1,16 @@
 // Akane Hub — CRM / 案件管理 / 売上管理 統合システム
 // マルチテナント: 全業務データは Organization (テナント) に属する。
-// SQLite は enum 非対応のため区分値は String + src/lib/constants.ts の定数で管理する。
+// 区分値は String + src/lib/constants.ts の定数で管理する (SQLite時代の名残だが移行コスト回避のため維持)。
+// テナント分離は Supabase (PostgreSQL) の RLS で強制する。ポリシーは scripts/apply-rls.ts を参照。
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ===== テナント・ユーザー =====
@@ -35,12 +37,12 @@ model Organization {
   datasets          Dataset[]
 }
 
+// 認証は Supabase Auth。id は auth.users.id (UUID) と一致させ、ここはプロフィール情報のみ持つ。
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String
-  passwordHash String
-  createdAt    DateTime @default(now())
+  id        String   @id
+  email     String   @unique
+  name      String
+  createdAt DateTime @default(now())
 
   memberships Membership[]
   activities  Activity[]

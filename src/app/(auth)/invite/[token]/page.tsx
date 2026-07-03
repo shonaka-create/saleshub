@@ -1,10 +1,12 @@
-import { db } from "@/lib/db";
+import { dbAdmin } from "@/lib/db";
+import { createSupabaseServer } from "@/lib/supabase";
 import { ROLE_LABELS, type Role } from "@/lib/constants";
 import { InviteForm } from "./invite-form";
 
+// 未ログインでも開ける公開ページのため、招待の照会は dbAdmin で行う (token を知る人のみ到達できる)。
 export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const invite = await db.invitation.findUnique({
+  const invite = await dbAdmin.invitation.findUnique({
     where: { token },
     include: { org: true },
   });
@@ -20,7 +22,13 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
     );
   }
 
-  const existingUser = await db.user.findUnique({ where: { email: invite.email } });
+  const existingUser = await dbAdmin.user.findUnique({ where: { email: invite.email } });
+  const supabase = await createSupabaseServer();
+  const {
+    data: { user: currentUser },
+  } = await supabase.auth.getUser();
+  const loggedInAsInvitee =
+    !!currentUser && currentUser.email?.toLowerCase() === invite.email.toLowerCase();
 
   return (
     <InviteForm
@@ -29,6 +37,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
       email={invite.email}
       roleLabel={ROLE_LABELS[invite.role as Role] ?? invite.role}
       existingUser={!!existingUser}
+      loggedInAsInvitee={loggedInAsInvitee}
     />
   );
 }

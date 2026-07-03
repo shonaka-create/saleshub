@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { acceptInvite, type AuthState } from "../../actions";
 
 const inputCls =
@@ -12,8 +13,29 @@ export function InviteForm(props: {
   email: string;
   roleLabel: string;
   existingUser: boolean;
+  loggedInAsInvitee: boolean;
 }) {
   const [state, action, pending] = useActionState<AuthState, FormData>(acceptInvite, {});
+
+  // 既存アカウント宛の招待は、本人としてログイン済みの場合のみ受諾できる
+  if (props.existingUser && !props.loggedInAsInvitee) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+        <h1 className="mb-1 text-lg font-semibold">「{props.orgName}」への招待</h1>
+        <p className="mb-6 text-sm text-slate-500">
+          {props.email} 宛の招待です ({props.roleLabel}として参加)。
+          このメールアドレスのアカウントは登録済みです。
+          ログインしてから、もう一度この招待リンクを開いてください。
+        </p>
+        <Link
+          href="/login"
+          className="block w-full rounded-lg bg-akane-600 px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-akane-700"
+        >
+          ログインする
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <form action={action} className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">

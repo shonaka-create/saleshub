@@ -8,12 +8,13 @@
     "start": "next start",
     "lint": "next lint",
     "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:rls": "tsx --env-file=.env scripts/apply-rls.ts",
+    "db:seed": "tsx --env-file=.env prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.10.0",
-    "bcryptjs": "^3.0.2",
-    "jose": "^6.0.11",
+    "@supabase/ssr": "^0.12.0",
+    "@supabase/supabase-js": "^2.110.0",
     "next": "^15.3.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

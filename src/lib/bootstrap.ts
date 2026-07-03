@@ -1,6 +1,7 @@
-import { db } from "./db";
+import { dbAdmin as db } from "./db";
 
 // 新規組織作成時の初期マスタ投入 (AKANE WEB STUDIO のサービス構成を既定値とする)
+// メンバーシップ成立前に実行されるため RLS をバイパスする dbAdmin を使う。
 export async function createOrganizationWithDefaults(name: string, ownerUserId: string) {
   const org = await db.organization.create({
     data: {
