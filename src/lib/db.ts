@@ -1,9 +1,26 @@
 import { PrismaClient } from "@prisma/client";
-import { cache } from "react";
+import { cookies } from "next/headers";
 
 // リクエスト単位の RLS コンテキスト。getSession() が検証済みの userId/orgId を設定し、
 // db への全クエリはこの値を Postgres の GUC (app.user_id / app.org_id) として送る。
-export const rlsContext = cache(() => ({ userId: "", orgId: "" }));
+//
+// 注意: React.cache() はレンダリング中しかメモ化されず、Server Action 実行中は
+// 呼び出しごとに新しい値を返すため使えない (auth 側で設定した値がここから見えなくなり、
+// RLS が全行を遮断してしまう)。代わりに cookies() が返すリクエスト固有のストアを
+// キーにした WeakMap で保持する。cookies() はレンダリング・Server Action の
+// どちらの文脈でも同一リクエスト内では同じオブジェクトを返す。
+type RlsCtx = { userId: string; orgId: string };
+const ctxByRequest = new WeakMap<object, RlsCtx>();
+
+export async function rlsContext(): Promise<RlsCtx> {
+  const key = (await cookies()) as unknown as object;
+  let ctx = ctxByRequest.get(key);
+  if (!ctx) {
+    ctx = { userId: "", orgId: "" };
+    ctxByRequest.set(key, ctx);
+  }
+  return ctx;
+}
 
 const globalForPrisma = globalThis as unknown as {
   prismaApp?: PrismaClient;
@@ -32,7 +49,7 @@ export const db = prismaApp.$extends({
   query: {
     $allModels: {
       async $allOperations({ args, query }) {
-        const ctx = rlsContext();
+        const ctx = await rlsContext();
         const [, result] = await prismaApp.$transaction([
           prismaApp.$executeRaw`SELECT set_config('app.user_id', ${ctx.userId}, TRUE), set_config('app.org_id', ${ctx.orgId}, TRUE)`,
           query(args) as never,

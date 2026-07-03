@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Akane Hub", template: "%s | Akane Hub" },
+  title: { default: "Saleshub", template: "%s | Saleshub" },
   description: "CRM・案件管理・売上管理の統合業務システム",
 };
 

@@ -20,8 +20,14 @@ model Organization {
   name         String
   baseCurrency String   @default("JPY") // ダッシュボード集計時の基準通貨
   fxRates      String   @default("{\"AUD\":95,\"USD\":150}") // 基準通貨への換算レート JSON
-  settings     String   @default("{}") // 機能カスタマイズ用 JSON
+  settings     String   @default("{}") // 機能カスタマイズ用 JSON (経営分析の閾値設定などもここ)
   createdAt    DateTime @default(now())
+
+  // ===== Pro プラン (経営分析) =====
+  plan                 String    @default("FREE") // FREE | PRO
+  trialEndsAt          DateTime? // 経営分析の14日無料トライアル終了日時 (初回アクセス時に設定)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
 
   memberships       Membership[]
   invitations       Invitation[]

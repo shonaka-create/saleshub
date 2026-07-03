@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { PageHeader, Card } from "@/components/ui";
+import { ActivityPanel } from "@/components/activity-panel";
 import { updateContract } from "@/app/actions/contracts";
 import { ContractForm, type ContractFormValues, type PlanOpt } from "../../contract-form";
 import { DeleteContractButton } from "./delete-contract";
@@ -18,6 +19,16 @@ export default async function EditContractPage({ params }: { params: Promise<{ i
 
   const contract = await db.contract.findFirst({ where: { id, orgId } });
   if (!contract) notFound();
+
+  // 活動履歴は顧客単位で共有 (顧客・案件ページで記録した内容もここに表示される)
+  const [customer, activities] = await Promise.all([
+    db.customer.findFirst({ where: { id: contract.customerId, orgId }, select: { name: true } }),
+    db.activity.findMany({
+      where: { customerId: contract.customerId, orgId },
+      include: { user: { select: { name: true } }, deal: { select: { id: true, title: true } } },
+      orderBy: { occurredAt: "desc" },
+    }),
+  ]);
 
   const [customers, services, plans] = await Promise.all([
     db.customer.findMany({ where: { orgId }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
@@ -55,18 +66,40 @@ export default async function EditContractPage({ params }: { params: Promise<{ i
         description={contract.name}
         actions={<DeleteContractButton contractId={contract.id} />}
       />
-      <Card className="p-6">
-        <ContractForm
-          action={updateContract}
-          initial={initial}
-          customers={customers}
-          services={services}
-          plans={plans as PlanOpt[]}
-          submitLabel="更新する"
-          cancelHref="/contracts"
-          showStatus
-        />
-      </Card>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <Card className="p-6">
+            <ContractForm
+              action={updateContract}
+              initial={initial}
+              customers={customers}
+              services={services}
+              plans={plans as PlanOpt[]}
+              submitLabel="更新する"
+              cancelHref="/contracts"
+              showStatus
+            />
+          </Card>
+        </div>
+        <div>
+          <Card className="p-5">
+            <h2 className="mb-4 text-sm font-semibold text-slate-800">
+              活動履歴
+              {customer && (
+                <span className="ml-2 text-xs font-normal text-slate-400">
+                  顧客「{customer.name}」の全記録
+                </span>
+              )}
+            </h2>
+            <ActivityPanel
+              customerId={contract.customerId}
+              dealId={contract.dealId}
+              path={`/contracts/${contract.id}/edit`}
+              activities={activities}
+            />
+          </Card>
+        </div>
+      </div>
     </>
   );
 }

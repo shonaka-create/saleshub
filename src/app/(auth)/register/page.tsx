@@ -21,7 +21,7 @@ export default function RegisterPage() {
       )}
       <label className="mb-4 block">
         <span className="mb-1 block text-sm font-medium text-slate-700">組織名</span>
-        <input type="text" name="orgName" required placeholder="AKANE WEB STUDIO" className={inputCls} />
+        <input type="text" name="orgName" required placeholder="例: 株式会社サンプル" className={inputCls} />
       </label>
       <label className="mb-4 block">
         <span className="mb-1 block text-sm font-medium text-slate-700">お名前</span>

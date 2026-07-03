@@ -169,36 +169,3 @@ export async function deleteDeal(id: string) {
   revalidatePath("/deals");
   redirect("/deals");
 }
-
-export async function addDealActivity(dealId: string, formData: FormData) {
-  const session = await requireSession();
-  const orgId = session.org.id;
-  const deal = await db.deal.findFirst({ where: { id: dealId, orgId } });
-  if (!deal) return;
-
-  const content = String(formData.get("content") ?? "").trim();
-  if (!content) return;
-  const type = String(formData.get("type") ?? "NOTE");
-
-  await db.activity.create({
-    data: {
-      orgId,
-      dealId,
-      customerId: deal.customerId,
-      userId: session.user.id,
-      type,
-      content,
-    },
-  });
-  revalidatePath(`/deals/${dealId}`);
-}
-
-export async function deleteDealActivity(id: string, dealId: string) {
-  const session = await requireSession();
-  const orgId = session.org.id;
-  const activity = await db.activity.findFirst({ where: { id, orgId, dealId } });
-  if (!activity) return;
-
-  await db.activity.delete({ where: { id } });
-  revalidatePath(`/deals/${dealId}`);
-}

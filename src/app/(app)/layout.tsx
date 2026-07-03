@@ -17,7 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <aside className="fixed inset-y-0 left-0 z-20 flex w-60 flex-col border-r border-slate-200 bg-white">
         <div className="border-b border-slate-100 px-5 py-4">
           <Link href="/dashboard" className="text-lg font-bold tracking-tight text-akane-700">
-            Akane Hub
+            Saleshub
           </Link>
           <OrgSwitcher
             current={{ id: session.org.id, name: session.org.name }}

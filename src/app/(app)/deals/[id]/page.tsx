@@ -3,13 +3,9 @@ import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/currency";
-import {
-  DEAL_STAGE_LABELS,
-  DEAL_STAGE_COLORS,
-  ACTIVITY_TYPE_LABELS,
-} from "@/lib/constants";
-import { PageHeader, Card, Badge, btnSecondary, btnPrimary } from "@/components/ui";
-import { ActivityForm, DeleteActivityButton } from "./activity-form";
+import { DEAL_STAGE_LABELS, DEAL_STAGE_COLORS } from "@/lib/constants";
+import { PageHeader, Card, btnSecondary, btnPrimary } from "@/components/ui";
+import { ActivityPanel } from "@/components/activity-panel";
 import { DeleteDealButton } from "./delete-deal";
 
 function parseCustomData(json: string): Record<string, string> {
@@ -42,13 +38,16 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
       service: true,
       plan: true,
       contracts: { select: { id: true } },
-      activities: {
-        include: { user: { select: { name: true } } },
-        orderBy: { occurredAt: "desc" },
-      },
     },
   });
   if (!deal) notFound();
+
+  // 活動履歴は顧客単位で共有 (顧客・他案件・契約ページで記録した内容もここに表示される)
+  const activities = await db.activity.findMany({
+    where: { customerId: deal.customerId, orgId },
+    include: { user: { select: { name: true } }, deal: { select: { id: true, title: true } } },
+    orderBy: { occurredAt: "desc" },
+  });
 
   const [defs] = await Promise.all([
     db.customFieldDef.findMany({ where: { orgId, entity: "deal" }, orderBy: { sortOrder: "asc" } }),
@@ -201,28 +200,19 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
 
         <div>
           <Card className="p-5">
-            <h2 className="mb-4 text-sm font-semibold text-slate-800">活動履歴</h2>
-            <ActivityForm dealId={deal.id} />
-            <div className="mt-5 space-y-4">
-              {deal.activities.length === 0 && (
-                <p className="text-sm text-slate-400">まだ活動記録がありません</p>
-              )}
-              {deal.activities.map((a) => (
-                <div key={a.id} className="border-l-2 border-akane-100 pl-3">
-                  <div className="flex items-center gap-2">
-                    <Badge>{ACTIVITY_TYPE_LABELS[a.type] ?? a.type}</Badge>
-                    <span className="text-xs text-slate-400">
-                      {new Date(a.occurredAt).toLocaleDateString("ja-JP")}
-                    </span>
-                    <span className="ml-auto">
-                      <DeleteActivityButton id={a.id} dealId={deal.id} />
-                    </span>
-                  </div>
-                  <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">{a.content}</p>
-                  {a.user && <p className="mt-0.5 text-xs text-slate-400">{a.user.name}</p>}
-                </div>
-              ))}
-            </div>
+            <h2 className="mb-4 text-sm font-semibold text-slate-800">
+              活動履歴
+              <span className="ml-2 text-xs font-normal text-slate-400">
+                顧客「{deal.customer.name}」の全記録
+              </span>
+            </h2>
+            <ActivityPanel
+              customerId={deal.customerId}
+              dealId={deal.id}
+              currentDealId={deal.id}
+              path={`/deals/${deal.id}`}
+              activities={activities}
+            />
           </Card>
         </div>
       </div>

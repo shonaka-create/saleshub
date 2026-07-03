@@ -109,43 +109,6 @@ export async function deleteCustomer(formData: FormData) {
   redirect("/customers");
 }
 
-// ===== 活動履歴 =====
-
-export async function addActivity(formData: FormData) {
-  const session = await requireSession();
-  const customerId = String(formData.get("customerId") ?? "");
-  const type = String(formData.get("type") ?? "NOTE");
-  const content = String(formData.get("content") ?? "").trim();
-  if (!customerId || !content) return;
-
-  const customer = await db.customer.findFirst({
-    where: { id: customerId, orgId: session.org.id },
-    select: { id: true },
-  });
-  if (!customer) return;
-
-  await db.activity.create({
-    data: {
-      orgId: session.org.id,
-      customerId,
-      userId: session.user.id,
-      type,
-      content,
-    },
-  });
-  revalidatePath(`/customers/${customerId}`);
-}
-
-export async function deleteActivity(formData: FormData) {
-  const session = await requireSession();
-  const id = String(formData.get("id") ?? "");
-  const customerId = String(formData.get("customerId") ?? "");
-  if (id) {
-    await db.activity.deleteMany({ where: { id, orgId: session.org.id } });
-  }
-  if (customerId) revalidatePath(`/customers/${customerId}`);
-}
-
 // ===== 担当者 (Contact) =====
 
 export async function addContact(formData: FormData) {

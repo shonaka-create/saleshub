@@ -7,21 +7,11 @@ import {
   CUSTOMER_STATUS_COLORS,
   CUSTOMER_STATUS_LABELS,
   DEAL_STAGE_LABELS,
-  ACTIVITY_TYPES,
-  ACTIVITY_TYPE_LABELS,
 } from "@/lib/constants";
 import { formatMoney } from "@/lib/currency";
-import {
-  PageHeader,
-  Card,
-  Badge,
-  EmptyState,
-  btnSecondary,
-  inputCls,
-  selectCls,
-  labelCls,
-} from "@/components/ui";
-import { addActivity, deleteActivity, addContact, deleteContact } from "@/app/actions/customers";
+import { PageHeader, Card, Badge, btnSecondary, inputCls } from "@/components/ui";
+import { ActivityPanel } from "@/components/activity-panel";
+import { addContact, deleteContact } from "@/app/actions/customers";
 import { DeleteCustomerButton } from "../delete-customer-button";
 
 function instagramHref(v: string): string {
@@ -48,7 +38,7 @@ export default async function CustomerDetailPage({
       contracts: { orderBy: { startDate: "desc" } },
       activities: {
         orderBy: { occurredAt: "desc" },
-        include: { user: true },
+        include: { user: { select: { name: true } }, deal: { select: { id: true, title: true } } },
       },
     },
   });
@@ -175,71 +165,14 @@ export default async function CustomerDetailPage({
             )}
           </Card>
 
-          {/* 活動履歴 */}
+          {/* 活動履歴 (顧客・案件・契約ページで共通) */}
           <Card className="p-6">
             <h2 className="mb-4 text-sm font-semibold text-slate-700">活動履歴</h2>
-            <form action={addActivity} className="mb-5 space-y-3 rounded-lg bg-slate-50 p-4">
-              <input type="hidden" name="customerId" value={customer.id} />
-              <div className="flex flex-wrap items-end gap-3">
-                <div>
-                  <label className={labelCls} htmlFor="activity-type">
-                    種別
-                  </label>
-                  <select id="activity-type" name="type" defaultValue="NOTE" className={selectCls}>
-                    {ACTIVITY_TYPES.map((t) => (
-                      <option key={t} value={t}>
-                        {ACTIVITY_TYPE_LABELS[t]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <textarea
-                name="content"
-                required
-                rows={3}
-                placeholder="活動内容を記録..."
-                className={inputCls}
-              />
-              <button type="submit" className={btnSecondary}>
-                記録する
-              </button>
-            </form>
-
-            {customer.activities.length === 0 ? (
-              <p className="text-sm text-slate-400">活動履歴はまだありません</p>
-            ) : (
-              <ul className="space-y-4">
-                {customer.activities.map((a) => (
-                  <li key={a.id} className="flex gap-3 border-l-2 border-slate-200 pl-4">
-                    <div className="flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge className="bg-akane-50 text-akane-700">
-                          {ACTIVITY_TYPE_LABELS[a.type] ?? a.type}
-                        </Badge>
-                        <span className="text-xs text-slate-500">
-                          {a.occurredAt.toLocaleDateString("ja-JP")}
-                        </span>
-                        {a.user && (
-                          <span className="text-xs text-slate-400">{a.user.name}</span>
-                        )}
-                      </div>
-                      <p className="mt-1 whitespace-pre-wrap text-sm text-slate-800">{a.content}</p>
-                    </div>
-                    <form action={deleteActivity}>
-                      <input type="hidden" name="id" value={a.id} />
-                      <input type="hidden" name="customerId" value={customer.id} />
-                      <button
-                        type="submit"
-                        className="text-xs text-slate-400 hover:text-rose-600"
-                      >
-                        削除
-                      </button>
-                    </form>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <ActivityPanel
+              customerId={customer.id}
+              path={`/customers/${customer.id}`}
+              activities={customer.activities}
+            />
           </Card>
         </div>
 

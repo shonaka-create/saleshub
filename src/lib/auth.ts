@@ -1,7 +1,6 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { cache } from "react";
 import { createSupabaseServer } from "./supabase";
 import { dbAdmin, rlsContext } from "./db";
 
@@ -27,7 +26,35 @@ export async function clearCurrentOrgCookie() {
 // Supabase Auth のユーザー + メンバーシップ検証済みのコンテキストを返す (リクエスト内キャッシュ)。
 // 検証に成功したら RLS コンテキストを設定し、以降の db クエリがテナント分離される。
 // メンバーシップ検証自体はセッション成立前のため dbAdmin で行う。
-export const getSession = cache(async () => {
+//
+// メモ化は React.cache ではなく cookies() ストアをキーにした WeakMap で行う。
+// React.cache はレンダリング外 (Server Action 実行中) ではメモ化されず、
+// RLS コンテキストの設定がアクション内の db クエリに反映されないため。
+type Session = {
+  user: { id: string; email: string; name: string; createdAt: Date };
+  org: {
+    id: string;
+    name: string;
+    baseCurrency: string;
+    fxRates: string;
+    settings: string;
+    createdAt: Date;
+  };
+  role: string;
+};
+const sessionByRequest = new WeakMap<object, Promise<Session | null>>();
+
+export async function getSession(): Promise<Session | null> {
+  const key = (await cookies()) as unknown as object;
+  let pending = sessionByRequest.get(key);
+  if (!pending) {
+    pending = resolveSession();
+    sessionByRequest.set(key, pending);
+  }
+  return pending;
+}
+
+async function resolveSession(): Promise<Session | null> {
   const supabase = await createSupabaseServer();
   const {
     data: { user: authUser },
@@ -50,7 +77,7 @@ export const getSession = cache(async () => {
   });
   if (!membership) return null;
 
-  const ctx = rlsContext();
+  const ctx = await rlsContext();
   ctx.userId = membership.userId;
   ctx.orgId = membership.orgId;
 
@@ -59,7 +86,7 @@ export const getSession = cache(async () => {
     org: membership.org,
     role: membership.role,
   };
-});
+}
 
 export async function requireSession() {
   const session = await getSession();

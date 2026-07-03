@@ -10,9 +10,10 @@ const links = [
   { href: "/deals", label: "案件管理", icon: "📋" },
   { href: "/contracts", label: "契約管理", icon: "📝" },
   { href: "/revenue", label: "売上管理", icon: "💰" },
+  { href: "/insights", label: "経営分析", icon: "📈", pro: true },
   { href: "/data", label: "データ連携", icon: "🔗" },
   { href: "/settings", label: "設定", icon: "⚙️" },
-];
+] as { href: string; label: string; icon: string; pro?: boolean }[];
 
 export function NavLinks() {
   const pathname = usePathname();
@@ -32,6 +33,11 @@ export function NavLinks() {
             >
               <span className="text-base leading-none">{link.icon}</span>
               {link.label}
+              {link.pro && (
+                <span className="ml-auto rounded-full bg-gradient-to-r from-amber-400 to-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                  PRO
+                </span>
+              )}
             </Link>
           </li>
         );
