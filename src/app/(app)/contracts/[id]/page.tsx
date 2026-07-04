@@ -6,6 +6,8 @@ import { formatMoney } from "@/lib/currency";
 import { PageHeader, Card, Badge, btnSecondary } from "@/components/ui";
 import { ActivityPanel } from "@/components/activity-panel";
 import { DeleteContractButton } from "./delete-contract";
+import { StepCheckbox } from "./step-checkbox";
+import { getContractSteps } from "@/lib/contract-steps";
 
 function fmtDate(d: Date | null): string {
   return d ? new Date(d).toLocaleDateString("ja-JP") : "—";
@@ -23,11 +25,15 @@ export default async function ContractDetailPage({ params }: { params: Promise<{
   if (!contract) notFound();
 
   // 活動履歴は顧客単位で共有 (顧客・案件ページで記録した内容もここに表示される)
-  const activities = await db.activity.findMany({
-    where: { customerId: contract.customerId, orgId },
-    include: { user: { select: { name: true } }, deal: { select: { id: true, title: true } } },
-    orderBy: { occurredAt: "desc" },
-  });
+  const [activities, steps] = await Promise.all([
+    db.activity.findMany({
+      where: { customerId: contract.customerId, orgId },
+      include: { user: { select: { name: true } }, deal: { select: { id: true, title: true } } },
+      orderBy: { occurredAt: "desc" },
+    }),
+    getContractSteps(orgId, contract.id),
+  ]);
+  const doneCount = steps.filter((s) => s.completedAt !== null).length;
 
   return (
     <>
@@ -46,6 +52,48 @@ export default async function ContractDetailPage({ params }: { params: Promise<{
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
+          <Card className="p-6">
+            <div className="mb-1 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-slate-700">手続きチェックリスト</h2>
+              {steps.length > 0 && (
+                <span className="text-xs font-medium text-slate-400">
+                  {doneCount}/{steps.length} 完了
+                </span>
+              )}
+            </div>
+            {steps.length === 0 ? (
+              <p className="mt-3 text-sm text-slate-400">
+                手続きテンプレートがまだ設定されていません。
+                <Link href="/contracts/steps" className="ml-1 text-akane-600 hover:underline">
+                  設定する →
+                </Link>
+              </p>
+            ) : (
+              <>
+                <div className="mt-3 mb-4 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className="h-full rounded-full bg-emerald-500 transition-all"
+                    style={{ width: `${Math.round((doneCount / steps.length) * 100)}%` }}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  {steps.map((s) => (
+                    <StepCheckbox
+                      key={s.stepDefId}
+                      contractId={contract.id}
+                      stepDefId={s.stepDefId}
+                      label={s.label}
+                      completedAt={s.completedAt}
+                    />
+                  ))}
+                </div>
+                {doneCount === steps.length && (
+                  <p className="mt-4 text-sm font-medium text-emerald-600">✅ すべての手続きが完了しました</p>
+                )}
+              </>
+            )}
+          </Card>
+
           <Card className="p-6">
             <div className="mb-4">
               {contract.status === "ACTIVE" ? (
@@ -90,13 +138,13 @@ export default async function ContractDetailPage({ params }: { params: Promise<{
               <div>
                 <dt className="text-xs font-medium text-slate-400">月額</dt>
                 <dd className="mt-0.5 text-sm font-semibold text-slate-800">
-                  {formatMoney(contract.monthlyFee, contract.currency)}
+                  {formatMoney(contract.monthlyFee, session.org.baseCurrency)}
                 </dd>
               </div>
               <div>
                 <dt className="text-xs font-medium text-slate-400">初期費用</dt>
                 <dd className="mt-0.5 text-sm font-semibold text-slate-800">
-                  {formatMoney(contract.initialFee, contract.currency)}
+                  {formatMoney(contract.initialFee, session.org.baseCurrency)}
                 </dd>
               </div>
               <div>

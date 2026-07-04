@@ -36,7 +36,6 @@ type Session = {
     id: string;
     name: string;
     baseCurrency: string;
-    fxRates: string;
     settings: string;
     createdAt: Date;
   };

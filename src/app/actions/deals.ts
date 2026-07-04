@@ -75,7 +75,6 @@ export async function createDeal(_prev: DealFormState, formData: FormData): Prom
       stage,
       serviceId,
       planId,
-      currency: String(formData.get("currency") ?? "JPY"),
       initialFee: toNum(formData, "initialFee"),
       monthlyFee: toNum(formData, "monthlyFee"),
       probability: Math.max(0, Math.min(100, Math.round(toNum(formData, "probability")))),
@@ -123,7 +122,6 @@ export async function updateDeal(_prev: DealFormState, formData: FormData): Prom
       stage,
       serviceId,
       planId,
-      currency: String(formData.get("currency") ?? "JPY"),
       initialFee: toNum(formData, "initialFee"),
       monthlyFee: toNum(formData, "monthlyFee"),
       probability: Math.max(0, Math.min(100, Math.round(toNum(formData, "probability")))),
@@ -157,6 +155,43 @@ export async function updateDealStage(id: string, stage: string) {
 
   revalidatePath("/deals");
   revalidatePath(`/deals/${id}`);
+}
+
+// 受注案件から契約を1クリックで作成し、そのまま手続きチェックリスト画面に遷移する。
+// 案件の顧客・サービス/プラン・金額をそのまま引き継ぐ (旧 /contracts/new のフルフォーム入力は経由しない)。
+export async function startContractFromDeal(dealId: string) {
+  const session = await requireSession();
+  const orgId = session.org.id;
+
+  const deal = await db.deal.findFirst({ where: { id: dealId, orgId } });
+  if (!deal || deal.stage !== "WON") return;
+
+  const existing = await db.contract.findFirst({ where: { dealId: deal.id, orgId } });
+  if (existing) redirect(`/contracts/${existing.id}`);
+
+  if (!deal.serviceId) {
+    redirect(`/deals/${deal.id}?contractError=service_required`);
+  }
+
+  const contract = await db.contract.create({
+    data: {
+      orgId,
+      customerId: deal.customerId,
+      dealId: deal.id,
+      serviceId: deal.serviceId,
+      planId: deal.planId,
+      name: deal.title,
+      initialFee: deal.initialFee,
+      monthlyFee: deal.monthlyFee,
+      startDate: new Date(),
+    },
+  });
+
+  revalidatePath("/deals");
+  revalidatePath(`/deals/${deal.id}`);
+  revalidatePath("/contracts");
+  revalidatePath("/revenue");
+  redirect(`/contracts/${contract.id}`);
 }
 
 export async function deleteDeal(id: string) {

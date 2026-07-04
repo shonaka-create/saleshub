@@ -2,12 +2,7 @@
 
 import { useActionState, useState } from "react";
 import Link from "next/link";
-import {
-  DEAL_STAGES,
-  DEAL_STAGE_LABELS,
-  CURRENCIES,
-  CURRENCY_SYMBOLS,
-} from "@/lib/constants";
+import { DEAL_STAGES, DEAL_STAGE_LABELS } from "@/lib/constants";
 import { btnPrimary, btnSecondary, inputCls, labelCls, selectCls } from "@/components/ui";
 import type { DealFormState } from "@/app/actions/deals";
 
@@ -17,7 +12,6 @@ export type PlanOpt = {
   id: string;
   serviceId: string;
   name: string;
-  currency: string;
   initialFee: number;
   monthlyFee: number;
 };
@@ -35,7 +29,6 @@ export type DealFormValues = {
   stage: string;
   serviceId: string;
   planId: string;
-  currency: string;
   initialFee: number;
   monthlyFee: number;
   probability: number;
@@ -67,7 +60,6 @@ export function DealForm({
 
   const [serviceId, setServiceId] = useState(initial.serviceId);
   const [planId, setPlanId] = useState(initial.planId);
-  const [currency, setCurrency] = useState(initial.currency);
   const [initialFee, setInitialFee] = useState(String(initial.initialFee));
   const [monthlyFee, setMonthlyFee] = useState(String(initial.monthlyFee));
 
@@ -82,8 +74,7 @@ export function DealForm({
     setPlanId(id);
     const plan = plans.find((p) => p.id === id);
     if (plan) {
-      // プラン選択で通貨・料金を自動入力
-      setCurrency(plan.currency);
+      // プラン選択で料金を自動入力
       setInitialFee(String(plan.initialFee));
       setMonthlyFee(String(plan.monthlyFee));
     }
@@ -165,22 +156,7 @@ export function DealForm({
         </div>
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-3">
-        <div>
-          <label className={labelCls}>通貨</label>
-          <select
-            name="currency"
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value)}
-            className={`${selectCls} w-full`}
-          >
-            {CURRENCIES.map((c) => (
-              <option key={c} value={c}>
-                {c} ({CURRENCY_SYMBOLS[c]})
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="grid gap-5 sm:grid-cols-2">
         <div>
           <label className={labelCls}>初期費用</label>
           <input

@@ -51,7 +51,7 @@ export default async function EditDealPage({ params }: { params: Promise<{ id: s
     db.plan.findMany({
       where: { service: { orgId }, active: true },
       orderBy: { sortOrder: "asc" },
-      select: { id: true, serviceId: true, name: true, currency: true, initialFee: true, monthlyFee: true },
+      select: { id: true, serviceId: true, name: true, initialFee: true, monthlyFee: true },
     }),
     db.customFieldDef.findMany({ where: { orgId, entity: "deal" }, orderBy: { sortOrder: "asc" } }),
   ]);
@@ -70,7 +70,6 @@ export default async function EditDealPage({ params }: { params: Promise<{ id: s
     stage: deal.stage,
     serviceId: deal.serviceId ?? "",
     planId: deal.planId ?? "",
-    currency: deal.currency,
     initialFee: deal.initialFee,
     monthlyFee: deal.monthlyFee,
     probability: deal.probability,

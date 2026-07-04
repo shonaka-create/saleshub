@@ -19,20 +19,11 @@ export async function updateOrg(formData: FormData) {
   const baseCurrency = String(formData.get("baseCurrency") ?? "JPY");
   if (!CURRENCIES.includes(baseCurrency as (typeof CURRENCIES)[number])) return;
 
-  // 基準通貨以外の全通貨について「1 通貨 = X 基準通貨」のレートを保存する
-  const fxRates: Record<string, number> = {};
-  for (const c of CURRENCIES) {
-    if (c === baseCurrency) continue;
-    const rate = Number(formData.get(`rate_${c}`) ?? 0);
-    fxRates[c] = Number.isFinite(rate) && rate > 0 ? rate : 1;
-  }
-
   await db.organization.update({
     where: { id: session.org.id },
     data: {
       ...(name ? { name } : {}),
       baseCurrency,
-      fxRates: JSON.stringify(fxRates),
     },
   });
   revalidatePath("/", "layout");
@@ -139,7 +130,6 @@ export async function createPlan(formData: FormData) {
     data: {
       serviceId,
       name,
-      currency: String(formData.get("currency") ?? "JPY"),
       initialFee: Number(formData.get("initialFee") ?? 0) || 0,
       monthlyFee: Number(formData.get("monthlyFee") ?? 0) || 0,
       sortOrder: count,
@@ -159,7 +149,6 @@ export async function updatePlan(formData: FormData) {
     where: { id },
     data: {
       name: String(formData.get("name") ?? plan.name),
-      currency: String(formData.get("currency") ?? plan.currency),
       initialFee: Number(formData.get("initialFee") ?? 0) || 0,
       monthlyFee: Number(formData.get("monthlyFee") ?? 0) || 0,
       active: formData.get("active") === "on",

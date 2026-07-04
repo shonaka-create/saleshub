@@ -28,30 +28,45 @@ export async function saveOverride(month: string, serviceId: string, amount: num
   revalidatePath("/dashboard");
 }
 
-// 自由行 (手入力売上)
-export async function saveManual(month: string, label: string, amount: number) {
+// 単発売上 (手入力行)。新規行は必ずいずれかのサービスに紐づける
+// (serviceId が null になるのは、紐付けが無かった旧データを編集する場合のみ)。
+export async function saveManual(
+  month: string,
+  serviceId: string | null,
+  label: string,
+  amount: number
+) {
   const session = await requireSession();
   const orgId = session.org.id;
-  if (!label.trim()) return;
+  if (serviceId) {
+    const service = await db.service.findFirst({ where: { id: serviceId, orgId } });
+    if (!service) return;
+  }
 
+  const lbl = label.trim();
   const existing = await db.monthlyValue.findFirst({
-    where: { orgId, month, type: MONTHLY_VALUE_TYPES.REVENUE_MANUAL, label },
+    where: { orgId, month, type: MONTHLY_VALUE_TYPES.REVENUE_MANUAL, serviceId, label: lbl || null },
   });
   if (existing) {
     await db.monthlyValue.update({ where: { id: existing.id }, data: { amount } });
   } else {
     await db.monthlyValue.create({
-      data: { orgId, month, type: MONTHLY_VALUE_TYPES.REVENUE_MANUAL, label, amount },
+      data: { orgId, month, type: MONTHLY_VALUE_TYPES.REVENUE_MANUAL, serviceId, label: lbl || null, amount },
     });
   }
   revalidatePath("/revenue");
   revalidatePath("/dashboard");
 }
 
-export async function deleteManualRow(label: string) {
+export async function deleteManualRow(serviceId: string | null, label: string) {
   const session = await requireSession();
   await db.monthlyValue.deleteMany({
-    where: { orgId: session.org.id, type: MONTHLY_VALUE_TYPES.REVENUE_MANUAL, label },
+    where: {
+      orgId: session.org.id,
+      type: MONTHLY_VALUE_TYPES.REVENUE_MANUAL,
+      serviceId,
+      label: label || null,
+    },
   });
   revalidatePath("/revenue");
   revalidatePath("/dashboard");

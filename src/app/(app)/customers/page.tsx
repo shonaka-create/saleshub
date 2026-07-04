@@ -9,12 +9,13 @@ import {
   CUSTOMER_STATUS_LABELS,
 } from "@/lib/constants";
 import { PageHeader, Badge, EmptyState, PrimaryLink, selectCls, inputCls, btnSecondary } from "@/components/ui";
+import { CreatedToast } from "./created-toast";
 import type { Prisma } from "@prisma/client";
 
 export default async function CustomersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string; country?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; country?: string; created?: string }>;
 }) {
   const session = await requireSession();
   const sp = await searchParams;
@@ -54,9 +55,13 @@ export default async function CustomersPage({
   }
 
   const hasFilter = Boolean(q || status || country);
+  const createdCustomer = sp.created ? customers.find((c) => c.id === sp.created) : undefined;
 
   return (
     <div>
+      {createdCustomer && (
+        <CreatedToast customerId={createdCustomer.id} customerName={createdCustomer.name} />
+      )}
       <PageHeader
         title="顧客管理"
         description="顧客の一覧・検索・登録を行います"

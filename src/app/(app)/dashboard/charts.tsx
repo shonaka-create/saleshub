@@ -55,7 +55,7 @@ export function RevenueStackedChart({
   hasManual: boolean;
   baseCurrency: string;
 }) {
-  const seriesNames = [...services.map((s) => s.name), ...(hasManual ? ["手入力"] : [])];
+  const seriesNames = [...services.map((s) => s.name), ...(hasManual ? ["未分類"] : [])];
   const lastSeries = seriesNames[seriesNames.length - 1];
 
   return (
@@ -80,7 +80,7 @@ export function RevenueStackedChart({
         ))}
         {hasManual && (
           <Bar
-            dataKey="手入力"
+            dataKey="未分類"
             stackId="rev"
             fill="#94a3b8"
             stroke="#ffffff"

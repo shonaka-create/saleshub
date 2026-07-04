@@ -2,7 +2,6 @@
 
 import { useActionState, useState } from "react";
 import Link from "next/link";
-import { CURRENCIES, CURRENCY_SYMBOLS } from "@/lib/constants";
 import { btnPrimary, btnSecondary, inputCls, labelCls, selectCls } from "@/components/ui";
 import type { ContractFormState } from "@/app/actions/contracts";
 
@@ -12,7 +11,6 @@ export type PlanOpt = {
   id: string;
   serviceId: string;
   name: string;
-  currency: string;
   initialFee: number;
   monthlyFee: number;
 };
@@ -24,7 +22,6 @@ export type ContractFormValues = {
   customerId: string;
   serviceId: string;
   planId: string;
-  currency: string;
   initialFee: number;
   monthlyFee: number;
   startDate: string; // yyyy-MM-dd
@@ -56,7 +53,6 @@ export function ContractForm({
 
   const [serviceId, setServiceId] = useState(initial.serviceId);
   const [planId, setPlanId] = useState(initial.planId);
-  const [currency, setCurrency] = useState(initial.currency);
   const [initialFee, setInitialFee] = useState(String(initial.initialFee));
   const [monthlyFee, setMonthlyFee] = useState(String(initial.monthlyFee));
 
@@ -71,7 +67,6 @@ export function ContractForm({
     setPlanId(id);
     const plan = plans.find((p) => p.id === id);
     if (plan) {
-      setCurrency(plan.currency);
       setInitialFee(String(plan.initialFee));
       setMonthlyFee(String(plan.monthlyFee));
     }
@@ -127,39 +122,22 @@ export function ContractForm({
         </div>
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2">
-        <div>
-          <label className={labelCls}>プラン</label>
-          <select
-            name="planId"
-            value={planId}
-            onChange={(e) => onPlanChange(e.target.value)}
-            disabled={!serviceId}
-            className={`${selectCls} w-full disabled:bg-slate-50`}
-          >
-            <option value="">未設定</option>
-            {servicePlans.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className={labelCls}>通貨</label>
-          <select
-            name="currency"
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value)}
-            className={`${selectCls} w-full`}
-          >
-            {CURRENCIES.map((c) => (
-              <option key={c} value={c}>
-                {c} ({CURRENCY_SYMBOLS[c]})
-              </option>
-            ))}
-          </select>
-        </div>
+      <div>
+        <label className={labelCls}>プラン</label>
+        <select
+          name="planId"
+          value={planId}
+          onChange={(e) => onPlanChange(e.target.value)}
+          disabled={!serviceId}
+          className={`${selectCls} w-full disabled:bg-slate-50`}
+        >
+          <option value="">未設定</option>
+          {servicePlans.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">

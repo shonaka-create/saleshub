@@ -71,24 +71,24 @@ async function main() {
     data: [
       {
         orgId: org.id, customerId: customers["Zen Yoga Studio"], title: "Zen Yoga — SNS Plan B 提案",
-        stage: "PROPOSAL", serviceId: sns.id, planId: planB.id, currency: "AUD",
-        initialFee: 0, monthlyFee: 750, probability: 70,
+        stage: "PROPOSAL", serviceId: sns.id, planId: planB.id,
+        initialFee: 0, monthlyFee: 71250, probability: 70,
         expectedCloseDate: ym(1), memo: "リール強化を希望。撮影同行はオプションで検討。",
       },
       {
         orgId: org.id, customerId: customers["株式会社サクラツアーズ"], title: "サクラツアーズ — tour-hub 導入商談",
-        stage: "NEGOTIATION", currency: "JPY", initialFee: 0, monthlyFee: 30000, probability: 50,
+        stage: "NEGOTIATION", initialFee: 0, monthlyFee: 30000, probability: 50,
         expectedCloseDate: ym(2), memo: "バックオフィス業務のシステム化を検討中。",
       },
       {
         orgId: org.id, customerId: customers["Bondi Fitness Lab"], title: "Bondi Fitness — サイト制作+SNS",
-        stage: "LEAD", serviceId: web.id, planId: webPlan.id, currency: "AUD",
-        initialFee: 600, monthlyFee: 200, probability: 30,
+        stage: "LEAD", serviceId: web.id, planId: webPlan.id,
+        initialFee: 57000, monthlyFee: 19000, probability: 30,
       },
       {
         orgId: org.id, customerId: customers["Cafe Hinata"], title: "Cafe Hinata — サイト制作",
-        stage: "WON", serviceId: web.id, planId: webPlan.id, currency: "AUD",
-        initialFee: 600, monthlyFee: 200, probability: 100, closedAt: ym(-2),
+        stage: "WON", serviceId: web.id, planId: webPlan.id,
+        initialFee: 57000, monthlyFee: 19000, probability: 100, closedAt: ym(-2),
       },
     ],
   });
@@ -98,23 +98,23 @@ async function main() {
     data: [
       {
         orgId: org.id, customerId: customers["Lash Studio MOANA"], serviceId: sns.id, planId: planA.id,
-        name: "MOANA — SNS Plan A", currency: "AUD", initialFee: 0, monthlyFee: 500, startDate: ym(-4),
+        name: "MOANA — SNS Plan A", initialFee: 0, monthlyFee: 47500, startDate: ym(-4),
       },
       {
         orgId: org.id, customerId: customers["Cafe Hinata"], serviceId: web.id, planId: webPlan.id,
-        name: "Cafe Hinata — サイト制作+運用", currency: "AUD", initialFee: 600, monthlyFee: 200, startDate: ym(-2),
+        name: "Cafe Hinata — サイト制作+運用", initialFee: 57000, monthlyFee: 19000, startDate: ym(-2),
       },
       {
         orgId: org.id, customerId: customers["Cafe Hinata"], serviceId: sns.id, planId: planA.id,
-        name: "Cafe Hinata — SNS Plan A", currency: "AUD", initialFee: 0, monthlyFee: 500, startDate: ym(-1),
+        name: "Cafe Hinata — SNS Plan A", initialFee: 0, monthlyFee: 47500, startDate: ym(-1),
       },
       {
         orgId: org.id, customerId: customers["美容室 ルミエール"], serviceId: humanHub.id, planId: hhStd.id,
-        name: "ルミエール — human-hub Standard", currency: "JPY", initialFee: 0, monthlyFee: 30000, startDate: ym(-3),
+        name: "ルミエール — human-hub Standard", initialFee: 0, monthlyFee: 30000, startDate: ym(-3),
       },
       {
         orgId: org.id, customerId: customers["Gold Coast Sushi Bar"], serviceId: sns.id, planId: planA.id,
-        name: "GC Sushi — SNS Plan A", currency: "AUD", initialFee: 0, monthlyFee: 500,
+        name: "GC Sushi — SNS Plan A", initialFee: 0, monthlyFee: 47500,
         startDate: ym(-5), endDate: ym(-1), status: "ENDED",
       },
     ],

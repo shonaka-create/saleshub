@@ -3,6 +3,7 @@ import { requireSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/currency";
 import { PageHeader, Card, Badge, EmptyState, PrimaryLink, btnSecondary, selectCls } from "@/components/ui";
+import { ContractsTabs } from "./tabs";
 
 function fmtDate(d: Date | null): string {
   return d ? new Date(d).toLocaleDateString("ja-JP") : "—";
@@ -21,21 +22,25 @@ export default async function ContractsPage({
   if (sp.status === "ACTIVE" || sp.status === "ENDED") where.status = sp.status;
   if (sp.serviceId) where.serviceId = sp.serviceId;
 
-  const [contracts, services, activeContracts] = await Promise.all([
+  const [contracts, services, activeContracts, totalSteps] = await Promise.all([
     db.contract.findMany({
       where,
-      include: { customer: true, service: true, plan: true, deal: { select: { id: true, title: true } } },
+      include: {
+        customer: true,
+        service: true,
+        plan: true,
+        deal: { select: { id: true, title: true } },
+        steps: { select: { completedAt: true } },
+      },
       orderBy: { startDate: "desc" },
     }),
     db.service.findMany({ where: { orgId, archived: false }, orderBy: { sortOrder: "asc" } }),
     db.contract.findMany({ where: { orgId, status: "ACTIVE" } }),
+    db.contractStepDef.count({ where: { orgId } }),
   ]);
 
-  // 稼働契約の月額を通貨別に集計 (月次経常収益)
-  const mrrByCurrency: Record<string, number> = {};
-  for (const c of activeContracts) {
-    mrrByCurrency[c.currency] = (mrrByCurrency[c.currency] ?? 0) + c.monthlyFee;
-  }
+  // 稼働契約の月額合計 (月次経常収益)
+  const mrr = activeContracts.reduce((sum, c) => sum + c.monthlyFee, 0);
 
   return (
     <>
@@ -44,6 +49,7 @@ export default async function ContractsPage({
         description="契約は月次売上の自動計算元になります"
         actions={<PrimaryLink href="/contracts/new">＋ 新規契約</PrimaryLink>}
       />
+      <ContractsTabs />
 
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
         <Card className="p-5">
@@ -55,18 +61,9 @@ export default async function ContractsPage({
         </Card>
         <Card className="p-5 sm:col-span-2">
           <p className="text-xs font-medium text-slate-400">月次経常収益 (稼働契約の月額合計)</p>
-          <div className="mt-1 flex flex-wrap items-baseline gap-x-5 gap-y-1">
-            {Object.keys(mrrByCurrency).length === 0 ? (
-              <p className="text-2xl font-bold text-slate-300">—</p>
-            ) : (
-              Object.entries(mrrByCurrency).map(([cur, amt]) => (
-                <p key={cur} className="text-2xl font-bold text-slate-900">
-                  {formatMoney(amt, cur)}
-                  <span className="ml-1 text-xs font-medium text-slate-400">/{cur}</span>
-                </p>
-              ))
-            )}
-          </div>
+          <p className="mt-1 text-2xl font-bold text-slate-900">
+            {activeContracts.length === 0 ? "—" : formatMoney(mrr, session.org.baseCurrency)}
+          </p>
         </Card>
       </div>
 
@@ -109,6 +106,7 @@ export default async function ContractsPage({
                 <th className="px-4 py-3 font-medium">開始日</th>
                 <th className="px-4 py-3 font-medium">終了日</th>
                 <th className="px-4 py-3 font-medium">状態</th>
+                <th className="px-4 py-3 font-medium">手続き進捗</th>
               </tr>
             </thead>
             <tbody>
@@ -143,10 +141,10 @@ export default async function ContractsPage({
                   </td>
                   <td className="px-4 py-3 text-slate-600">{c.plan?.name ?? "—"}</td>
                   <td className="px-4 py-3 text-right font-medium text-slate-700">
-                    {formatMoney(c.monthlyFee, c.currency)}
+                    {formatMoney(c.monthlyFee, session.org.baseCurrency)}
                   </td>
                   <td className="px-4 py-3 text-right text-slate-600">
-                    {formatMoney(c.initialFee, c.currency)}
+                    {formatMoney(c.initialFee, session.org.baseCurrency)}
                   </td>
                   <td className="px-4 py-3 text-slate-600">{fmtDate(c.startDate)}</td>
                   <td className="px-4 py-3 text-slate-600">{fmtDate(c.endDate)}</td>
@@ -155,6 +153,21 @@ export default async function ContractsPage({
                       <Badge className="bg-emerald-100 text-emerald-800">稼働中</Badge>
                     ) : (
                       <Badge className="bg-slate-100 text-slate-600">終了</Badge>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {totalSteps === 0 ? (
+                      "—"
+                    ) : (
+                      <span
+                        className={
+                          c.steps.filter((s) => s.completedAt !== null).length === totalSteps
+                            ? "font-medium text-emerald-600"
+                            : ""
+                        }
+                      >
+                        {c.steps.filter((s) => s.completedAt !== null).length}/{totalSteps}
+                      </span>
                     )}
                   </td>
                 </tr>

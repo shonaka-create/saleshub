@@ -1,6 +1,6 @@
 import { requireSession, isAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { SERVICE_CATEGORIES, SERVICE_CATEGORY_LABELS, CURRENCIES } from "@/lib/constants";
+import { SERVICE_CATEGORIES, SERVICE_CATEGORY_LABELS } from "@/lib/constants";
 import { formatMoney } from "@/lib/currency";
 import { Card, Badge, btnPrimary, btnSecondary, inputCls, selectCls } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
@@ -16,6 +16,7 @@ import {
 export default async function ServicesSettingsPage() {
   const session = await requireSession();
   const admin = isAdmin(session.role);
+  const baseCurrency = session.org.baseCurrency;
   const services = await db.service.findMany({
     where: { orgId: session.org.id },
     include: { plans: { orderBy: { sortOrder: "asc" } } },
@@ -78,11 +79,6 @@ export default async function ServicesSettingsPage() {
                 <form key={plan.id} action={updatePlan} className="flex flex-wrap items-center gap-2">
                   <input type="hidden" name="id" value={plan.id} />
                   <input name="name" defaultValue={plan.name} className={`${inputCls} min-w-40 flex-1`} />
-                  <select name="currency" defaultValue={plan.currency} className={selectCls}>
-                    {CURRENCIES.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
                   <label className="flex items-center gap-1 text-xs text-slate-500">
                     初期
                     <input name="initialFee" type="number" step="any" defaultValue={plan.initialFee} className={`${inputCls} w-24`} />
@@ -98,7 +94,7 @@ export default async function ServicesSettingsPage() {
                   <button type="submit" className="text-xs font-medium text-akane-600 hover:underline">保存</button>
                   <ConfirmButton
                     action={deletePlan.bind(null, plan.id)}
-                    message={`プラン「${plan.name}」(${formatMoney(plan.monthlyFee, plan.currency)}/月) を削除しますか？`}
+                    message={`プラン「${plan.name}」(${formatMoney(plan.monthlyFee, baseCurrency)}/月) を削除しますか？`}
                     className="text-xs text-slate-400 hover:text-rose-500"
                   >
                     削除
@@ -110,11 +106,6 @@ export default async function ServicesSettingsPage() {
             <form action={createPlan} className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-200 pt-3">
               <input type="hidden" name="serviceId" value={service.id} />
               <input name="name" placeholder="新しいプラン名" required className={`${inputCls} min-w-40 flex-1`} />
-              <select name="currency" defaultValue="JPY" className={selectCls}>
-                {CURRENCIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
               <label className="flex items-center gap-1 text-xs text-slate-500">
                 初期
                 <input name="initialFee" type="number" step="any" defaultValue={0} className={`${inputCls} w-24`} />

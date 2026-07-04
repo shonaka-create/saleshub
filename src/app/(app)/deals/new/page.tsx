@@ -27,7 +27,7 @@ export default async function NewDealPage() {
     db.plan.findMany({
       where: { service: { orgId }, active: true },
       orderBy: { sortOrder: "asc" },
-      select: { id: true, serviceId: true, name: true, currency: true, initialFee: true, monthlyFee: true },
+      select: { id: true, serviceId: true, name: true, initialFee: true, monthlyFee: true },
     }),
     db.customFieldDef.findMany({ where: { orgId, entity: "deal" }, orderBy: { sortOrder: "asc" } }),
   ]);
@@ -45,7 +45,6 @@ export default async function NewDealPage() {
     stage: "LEAD",
     serviceId: "",
     planId: "",
-    currency: "JPY",
     initialFee: 0,
     monthlyFee: 0,
     probability: 50,

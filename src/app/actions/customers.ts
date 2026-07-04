@@ -70,7 +70,7 @@ export async function createCustomer(
   });
 
   revalidatePath("/customers");
-  redirect(`/customers/${customer.id}`);
+  redirect(`/customers?created=${customer.id}`);
 }
 
 export async function updateCustomer(

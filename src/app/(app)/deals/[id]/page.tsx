@@ -7,6 +7,7 @@ import { DEAL_STAGE_LABELS, DEAL_STAGE_COLORS } from "@/lib/constants";
 import { PageHeader, Card, btnSecondary, btnPrimary } from "@/components/ui";
 import { ActivityPanel } from "@/components/activity-panel";
 import { DeleteDealButton } from "./delete-deal";
+import { startContractFromDeal } from "@/app/actions/deals";
 
 function parseCustomData(json: string): Record<string, string> {
   try {
@@ -26,10 +27,17 @@ function fmtDate(d: Date | null): string {
   return d ? new Date(d).toLocaleDateString("ja-JP") : "—";
 }
 
-export default async function DealDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function DealDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ contractError?: string }>;
+}) {
   const session = await requireSession();
   const orgId = session.org.id;
   const { id } = await params;
+  const sp = await searchParams;
 
   const deal = await db.deal.findFirst({
     where: { id, orgId },
@@ -64,9 +72,11 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
         actions={
           <>
             {canConvert && (
-              <Link href={`/contracts/new?dealId=${deal.id}`} className={btnPrimary}>
-                📝 この案件を契約に変換
-              </Link>
+              <form action={startContractFromDeal.bind(null, deal.id)}>
+                <button type="submit" className={btnPrimary}>
+                  📝 契約手続きを開始
+                </button>
+              </form>
             )}
             <Link href={`/deals/${deal.id}/edit`} className={btnSecondary}>
               編集
@@ -76,17 +86,25 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
         }
       />
 
+      {sp.contractError === "service_required" && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          契約手続きを開始するには、先にこの案件の「サービス」を設定してください。
+        </div>
+      )}
+
       {canConvert && (
         <div className="mb-6 flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
           <p className="text-sm text-emerald-800">
-            🎉 この案件は受注済みです。契約を作成すると月次売上に自動計上されます。
+            🎉 この案件は受注済みです。契約手続きを開始すると月次売上に自動計上されます。
           </p>
-          <Link
-            href={`/contracts/new?dealId=${deal.id}`}
-            className="rounded-lg bg-emerald-600 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
-          >
-            契約に変換
-          </Link>
+          <form action={startContractFromDeal.bind(null, deal.id)}>
+            <button
+              type="submit"
+              className="rounded-lg bg-emerald-600 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
+            >
+              契約手続きを開始
+            </button>
+          </form>
         </div>
       )}
 
@@ -134,13 +152,13 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
               <div>
                 <dt className="text-xs font-medium text-slate-400">月額</dt>
                 <dd className="mt-0.5 text-sm font-semibold text-slate-800">
-                  {formatMoney(deal.monthlyFee, deal.currency)}
+                  {formatMoney(deal.monthlyFee, session.org.baseCurrency)}
                 </dd>
               </div>
               <div>
                 <dt className="text-xs font-medium text-slate-400">初期費用</dt>
                 <dd className="mt-0.5 text-sm font-semibold text-slate-800">
-                  {formatMoney(deal.initialFee, deal.currency)}
+                  {formatMoney(deal.initialFee, session.org.baseCurrency)}
                 </dd>
               </div>
               <div>

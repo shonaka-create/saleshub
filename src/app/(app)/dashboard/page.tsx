@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { planStatus, TRIAL_DAYS, PRO_PRICE_JPY } from "@/lib/plan";
 import { buildInsightsReport } from "@/lib/insights";
 import { addMonths, currentMonthKey, formatMonthJa } from "@/lib/months";
-import { parseFxRates, toBase, formatMoney } from "@/lib/currency";
+import { formatMoney } from "@/lib/currency";
 import { DEAL_STAGE_LABELS } from "@/lib/constants";
 import { PageHeader, Card, btnPrimary, btnSecondary, inputCls, labelCls } from "@/components/ui";
 import {
@@ -57,7 +57,6 @@ export default async function DashboardPage({
   // 売上レポート + 経営指標 (基本指標は全プランで表示、Pro指標はアクセス時のみ描画)
   const report = await buildInsightsReport(orgId, org.settings);
   const base = report.baseCurrency;
-  const rates = parseFxRates(session.org.fxRates);
   const fmt = (v: number) => formatMoney(Math.round(v), base);
 
   // ===== なじみのある基本指標 =====
@@ -66,10 +65,7 @@ export default async function DashboardPage({
   const revenueDelta =
     lastMonthRevenue > 0 ? ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 : null;
   const thisMonthProfit = report.profit[now] ?? 0;
-  const pipelineValue = openDeals.reduce(
-    (sum, d) => sum + toBase(d.monthlyFee, d.currency, base, rates),
-    0
-  );
+  const pipelineValue = openDeals.reduce((sum, d) => sum + d.monthlyFee, 0);
 
   const basicTiles = [
     {
@@ -104,8 +100,19 @@ export default async function DashboardPage({
   // ===== グラフ用データ =====
   const chartData = report.months.map((m) => {
     const row: Record<string, string | number> = { month: m };
-    for (const s of report.serviceRows) row[s.name] = Math.round(s.cells[m].effective);
-    row["手入力"] = Math.round(report.manualRows.reduce((sum, r) => sum + (r.cells[m] ?? 0), 0));
+    for (const s of report.serviceRows) {
+      // 単発売上 (行を追加) はサービスに紐づくため、そのサービスの棒に合算する
+      const manualForService = report.manualRows
+        .filter((r) => r.serviceId === s.serviceId)
+        .reduce((sum, r) => sum + (r.cells[m] ?? 0), 0);
+      row[s.name] = Math.round(s.cells[m].effective + manualForService);
+    }
+    // 紐付けのない旧データのみ「未分類」として別枠表示
+    row["未分類"] = Math.round(
+      report.manualRows
+        .filter((r) => !r.serviceId)
+        .reduce((sum, r) => sum + (r.cells[m] ?? 0), 0)
+    );
     row.revenue = Math.round(report.revenue[m]);
     row.expense = Math.round(report.expense[m]);
     row.profit = Math.round(report.profit[m]);
@@ -117,7 +124,7 @@ export default async function DashboardPage({
     row.outsourcing = Math.round(report.outsourcingCost[m]);
     return row;
   });
-  const hasManual = report.manualRows.some((r) => r.total !== 0);
+  const hasUnlinkedManual = report.manualRows.some((r) => !r.serviceId && r.total !== 0);
   const services = report.serviceRows.map((s) => ({ name: s.name, color: s.color }));
 
   const pipelineData = (["LEAD", "NEGOTIATION", "PROPOSAL"] as const).map((stage) => {
@@ -125,9 +132,7 @@ export default async function DashboardPage({
     return {
       stage: DEAL_STAGE_LABELS[stage],
       count: deals.length,
-      amount: Math.round(
-        deals.reduce((sum, d) => sum + toBase(d.monthlyFee, d.currency, base, rates), 0)
-      ),
+      amount: Math.round(deals.reduce((sum, d) => sum + d.monthlyFee, 0)),
     };
   });
 
@@ -259,7 +264,7 @@ export default async function DashboardPage({
                 売上管理 (表で見る) →
               </Link>
             </div>
-            <RevenueStackedChart data={chartData} services={services} hasManual={hasManual} baseCurrency={base} />
+            <RevenueStackedChart data={chartData} services={services} hasManual={hasUnlinkedManual} baseCurrency={base} />
           </Card>
 
           <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">

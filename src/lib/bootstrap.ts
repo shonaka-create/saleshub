@@ -10,7 +10,6 @@ export async function createOrganizationWithDefaults(name: string, ownerUserId: 
     data: {
       name,
       baseCurrency: "JPY",
-      fxRates: JSON.stringify({ AUD: 95, USD: 150 }),
       freeUntil,
       earlyBird,
       memberships: { create: { userId: ownerUserId, role: "OWNER" } },
@@ -26,9 +25,9 @@ export async function createOrganizationWithDefaults(name: string, ownerUserId: 
       sortOrder: 0,
       plans: {
         create: [
-          { name: "Plan A (週1投稿)", currency: "AUD", initialFee: 0, monthlyFee: 500, sortOrder: 0 },
-          { name: "Plan B (週2投稿)", currency: "AUD", initialFee: 0, monthlyFee: 750, sortOrder: 1 },
-          { name: "Plan C (週3投稿+撮影)", currency: "AUD", initialFee: 0, monthlyFee: 1500, sortOrder: 2 },
+          { name: "Plan A (週1投稿)", initialFee: 0, monthlyFee: 47500, sortOrder: 0 },
+          { name: "Plan B (週2投稿)", initialFee: 0, monthlyFee: 71250, sortOrder: 1 },
+          { name: "Plan C (週3投稿+撮影)", initialFee: 0, monthlyFee: 142500, sortOrder: 2 },
         ],
       },
     },
@@ -42,7 +41,7 @@ export async function createOrganizationWithDefaults(name: string, ownerUserId: 
       sortOrder: 1,
       plans: {
         create: [
-          { name: "制作+運用パッケージ", currency: "AUD", initialFee: 600, monthlyFee: 200, sortOrder: 0 },
+          { name: "制作+運用パッケージ", initialFee: 57000, monthlyFee: 19000, sortOrder: 0 },
         ],
       },
     },
@@ -56,8 +55,8 @@ export async function createOrganizationWithDefaults(name: string, ownerUserId: 
       sortOrder: 2,
       plans: {
         create: [
-          { name: "Standard", currency: "JPY", initialFee: 0, monthlyFee: 30000, sortOrder: 0 },
-          { name: "Pro", currency: "JPY", initialFee: 0, monthlyFee: 50000, sortOrder: 1 },
+          { name: "Standard", initialFee: 0, monthlyFee: 30000, sortOrder: 0 },
+          { name: "Pro", initialFee: 0, monthlyFee: 50000, sortOrder: 1 },
         ],
       },
     },
@@ -71,8 +70,8 @@ export async function createOrganizationWithDefaults(name: string, ownerUserId: 
       sortOrder: 3,
       plans: {
         create: [
-          { name: "Standard", currency: "JPY", initialFee: 0, monthlyFee: 30000, sortOrder: 0 },
-          { name: "Pro", currency: "JPY", initialFee: 0, monthlyFee: 50000, sortOrder: 1 },
+          { name: "Standard", initialFee: 0, monthlyFee: 30000, sortOrder: 0 },
+          { name: "Pro", initialFee: 0, monthlyFee: 50000, sortOrder: 1 },
         ],
       },
     },

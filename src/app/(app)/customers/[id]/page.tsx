@@ -243,7 +243,7 @@ export default async function CustomerDetailPage({
                           {DEAL_STAGE_LABELS[d.stage] ?? d.stage}
                         </Badge>
                         <span className="whitespace-nowrap text-xs text-slate-500">
-                          {formatMoney(d.monthlyFee, d.currency)}
+                          {formatMoney(d.monthlyFee, session.org.baseCurrency)}
                         </span>
                       </span>
                     </Link>
@@ -279,7 +279,7 @@ export default async function CustomerDetailPage({
                         </Badge>
                       </div>
                       <div className="mt-1 flex items-center justify-between text-xs text-slate-500">
-                        <span>{formatMoney(ct.monthlyFee, ct.currency)}/月</span>
+                        <span>{formatMoney(ct.monthlyFee, session.org.baseCurrency)}/月</span>
                         <span>{ct.startDate.toLocaleDateString("ja-JP")}〜</span>
                       </div>
                       {ct.deal && (

@@ -259,7 +259,12 @@ export default async function BillingPage({
             </p>
             <p className="text-xs text-slate-400">Pro プランのすべて + 以下</p>
             <ul className="mt-5 space-y-2 text-sm text-slate-700">
-              {["請求書管理 (契約・売上と連動した発行・入金管理)", "契約書管理 (契約書ファイルの保管・締結状況管理)", "委託費管理 (外注先・委託先への支払い管理)"].map((f) => (
+              {[
+                "請求書管理 (契約・売上と連動した発行・入金管理)",
+                "契約書管理 (契約書ファイルの保管・締結状況管理)",
+                "委託費管理 (外注先・委託先への支払い管理)",
+                "タスク管理・WBSなど、今後順次追加予定",
+              ].map((f) => (
                 <li key={f} className="flex items-start gap-2">
                   <span className="text-indigo-500">◆</span>
                   {f}

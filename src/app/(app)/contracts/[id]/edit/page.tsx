@@ -40,7 +40,7 @@ export default async function EditContractPage({ params }: { params: Promise<{ i
     db.plan.findMany({
       where: { service: { orgId }, active: true },
       orderBy: { sortOrder: "asc" },
-      select: { id: true, serviceId: true, name: true, currency: true, initialFee: true, monthlyFee: true },
+      select: { id: true, serviceId: true, name: true, initialFee: true, monthlyFee: true },
     }),
   ]);
 
@@ -50,7 +50,6 @@ export default async function EditContractPage({ params }: { params: Promise<{ i
     customerId: contract.customerId,
     serviceId: contract.serviceId,
     planId: contract.planId ?? "",
-    currency: contract.currency,
     initialFee: contract.initialFee,
     monthlyFee: contract.monthlyFee,
     startDate: toDateInput(contract.startDate),

@@ -1,18 +1,19 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import type { RevenueReport } from "@/lib/revenue";
 import { formatMonthShort } from "@/lib/months";
 import { saveOverride, saveManual, saveExpense, deleteManualRow } from "@/app/actions/revenue";
 
 type CellTarget =
   | { kind: "service"; serviceId: string; month: string }
-  | { kind: "manual"; label: string; month: string }
+  | { kind: "manual"; serviceId: string | null; label: string; month: string }
   | { kind: "expense"; categoryId: string; month: string };
 
 function cellKey(t: CellTarget): string {
   if (t.kind === "service") return `s:${t.serviceId}:${t.month}`;
-  if (t.kind === "manual") return `m:${t.label}:${t.month}`;
+  if (t.kind === "manual") return `m:${t.serviceId ?? ""}:${t.label}:${t.month}`;
   return `e:${t.categoryId}:${t.month}`;
 }
 
@@ -24,6 +25,9 @@ export function RevenueGrid({ report }: { report: RevenueReport }) {
   const [state, setState] = useState(report);
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  const [addingRow, setAddingRow] = useState(false);
+  const [newServiceId, setNewServiceId] = useState("");
+  const [newLabel, setNewLabel] = useState("");
   const [, startTransition] = useTransition();
 
   const { months } = state;
@@ -67,7 +71,7 @@ export function RevenueGrid({ report }: { report: RevenueReport }) {
           row.total = months.reduce((s, m) => s + row.cells[m].effective, 0);
         }
       } else if (t.kind === "manual") {
-        const row = next.manualRows.find((r) => r.label === t.label);
+        const row = next.manualRows.find((r) => r.serviceId === t.serviceId && r.label === t.label);
         if (row) {
           row.cells[t.month] = num ?? 0;
           row.total = months.reduce((s, m) => s + (row.cells[m] ?? 0), 0);
@@ -84,29 +88,51 @@ export function RevenueGrid({ report }: { report: RevenueReport }) {
     setEditing(null);
     startTransition(async () => {
       if (t.kind === "service") await saveOverride(t.month, t.serviceId, num);
-      else if (t.kind === "manual") await saveManual(t.month, t.label, num ?? 0);
+      else if (t.kind === "manual") await saveManual(t.month, t.serviceId, t.label, num ?? 0);
       else await saveExpense(t.month, t.categoryId, num ?? 0);
     });
   }
 
-  function addManualRow() {
-    const label = window.prompt("行の名前を入力してください (例: スポット案件)");
-    if (!label?.trim()) return;
-    if (state.manualRows.some((r) => r.label === label.trim())) return;
+  function beginAddRow() {
+    setNewServiceId(state.serviceRows[0]?.serviceId ?? "");
+    setNewLabel("");
+    setAddingRow(true);
+  }
+
+  function confirmAddRow() {
+    const service = state.serviceRows.find((r) => r.serviceId === newServiceId);
+    if (!service) return;
+    const label = newLabel.trim();
+    if (state.manualRows.some((r) => r.serviceId === service.serviceId && r.label === label)) {
+      setAddingRow(false);
+      return;
+    }
     setState((prev) => ({
       ...prev,
       manualRows: [
         ...prev.manualRows,
-        { label: label.trim(), cells: Object.fromEntries(months.map((m) => [m, 0])), total: 0 },
+        {
+          serviceId: service.serviceId,
+          serviceName: service.name,
+          serviceColor: service.color,
+          label,
+          cells: Object.fromEntries(months.map((m) => [m, 0])),
+          total: 0,
+        },
       ],
     }));
+    setAddingRow(false);
   }
 
-  function removeManualRow(label: string) {
-    if (!window.confirm(`「${label}」行を削除しますか？入力済みの値も削除されます。`)) return;
-    setState((prev) => ({ ...prev, manualRows: prev.manualRows.filter((r) => r.label !== label) }));
+  function removeManualRow(row: RevenueReport["manualRows"][number]) {
+    const name = row.label ? `${row.serviceName ?? "未分類"} - ${row.label}` : row.serviceName ?? "未分類";
+    if (!window.confirm(`「${name}」行を削除しますか？入力済みの値も削除されます。`)) return;
+    setState((prev) => ({
+      ...prev,
+      manualRows: prev.manualRows.filter((r) => !(r.serviceId === row.serviceId && r.label === row.label)),
+    }));
     startTransition(async () => {
-      await deleteManualRow(label);
+      await deleteManualRow(row.serviceId, row.label);
     });
   }
 
@@ -191,21 +217,28 @@ export function RevenueGrid({ report }: { report: RevenueReport }) {
             </tr>
           ))}
           {state.manualRows.map((row) => (
-            <tr key={row.label} className="border-b border-slate-100 bg-white hover:bg-slate-50">
+            <tr key={`${row.serviceId ?? ""}:${row.label}`} className="border-b border-slate-100 bg-white hover:bg-slate-50">
               <td className={th}>
-                <span className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-slate-300 align-middle" />
-                {row.label}
+                <span
+                  className="mr-2 inline-block h-2.5 w-2.5 rounded-full align-middle"
+                  style={{ backgroundColor: row.serviceColor ?? "#cbd5e1" }}
+                />
+                {row.serviceName ?? "未分類"}
+                {row.label && <span className="ml-1.5 text-xs text-slate-400">・{row.label}</span>}
               </td>
               {months.map((m) => (
                 <td key={m} className={td}>
-                  {editableCell({ kind: "manual", label: row.label, month: m }, row.cells[m] ?? 0)}
+                  {editableCell(
+                    { kind: "manual", serviceId: row.serviceId, label: row.label, month: m },
+                    row.cells[m] ?? 0
+                  )}
                 </td>
               ))}
               <td className={`${td} font-medium`}>{fmt(row.total)}</td>
               <td className="px-1">
                 <button
                   type="button"
-                  onClick={() => removeManualRow(row.label)}
+                  onClick={() => removeManualRow(row)}
                   className="text-xs text-slate-300 hover:text-rose-500"
                   title="行を削除"
                 >
@@ -214,14 +247,64 @@ export function RevenueGrid({ report }: { report: RevenueReport }) {
               </td>
             </tr>
           ))}
-          <tr className="border-b border-slate-200 bg-white">
-            <td className={`${th} text-slate-500`}>
-              <button type="button" onClick={addManualRow} className="text-sm font-medium text-akane-600 hover:underline">
-                ＋ 行を追加
-              </button>
-            </td>
-            <td colSpan={months.length + 2}></td>
-          </tr>
+          {addingRow ? (
+            <tr className="border-b border-slate-200 bg-akane-50/30">
+              <td className={th} colSpan={months.length + 3}>
+                <div className="flex flex-wrap items-center gap-2 py-1">
+                  <select
+                    value={newServiceId}
+                    onChange={(e) => setNewServiceId(e.target.value)}
+                    className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                  >
+                    {state.serviceRows.map((s) => (
+                      <option key={s.serviceId} value={s.serviceId}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    value={newLabel}
+                    onChange={(e) => setNewLabel(e.target.value)}
+                    placeholder="内容 (任意・例: スポット案件)"
+                    className="w-56 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={confirmAddRow}
+                    className="rounded-lg bg-akane-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-akane-700"
+                  >
+                    追加
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAddingRow(false)}
+                    className="text-sm text-slate-500 hover:underline"
+                  >
+                    キャンセル
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ) : (
+            <tr className="border-b border-slate-200 bg-white">
+              <td className={`${th} text-slate-500`} colSpan={months.length + 3}>
+                {state.serviceRows.length > 0 ? (
+                  <button type="button" onClick={beginAddRow} className="text-sm font-medium text-akane-600 hover:underline">
+                    ＋ 行を追加 (サービスに紐づく単発売上)
+                  </button>
+                ) : (
+                  <span className="text-sm text-slate-400">
+                    単発売上を追加するには、先に
+                    <Link href="/revenue/services" className="text-akane-600 hover:underline">
+                      「サービス・プラン」
+                    </Link>
+                    でサービスを登録してください
+                  </span>
+                )}
+              </td>
+            </tr>
+          )}
           <tr className="border-b-2 border-slate-300 bg-akane-50/50 font-semibold">
             <td className={th}>売上高合計</td>
             {months.map((m) => (

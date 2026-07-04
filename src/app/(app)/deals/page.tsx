@@ -7,28 +7,18 @@ import {
   DEAL_STAGE_LABELS,
   DEAL_STAGE_COLORS,
 } from "@/lib/constants";
-import { PageHeader, Card, EmptyState, PrimaryLink, btnSecondary, selectCls } from "@/components/ui";
+import { PageHeader, Card, EmptyState, PrimaryLink, btnSecondary, btnPrimary, selectCls } from "@/components/ui";
 import { StageSelect } from "./stage-select";
+import { startContractFromDeal } from "@/app/actions/deals";
 
 type DealWithRels = Awaited<ReturnType<typeof loadDeals>>[number];
 
 async function loadDeals(orgId: string) {
   return db.deal.findMany({
     where: { orgId },
-    include: { customer: true, service: true },
+    include: { customer: true, service: true, contracts: { select: { id: true } } },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
   });
-}
-
-// 通貨別に金額を合計し "¥60,000 + A$750" のように表示
-function sumByCurrency(deals: { monthlyFee: number; currency: string }[]): string {
-  const totals: Record<string, number> = {};
-  for (const d of deals) {
-    if (!d.monthlyFee) continue;
-    totals[d.currency] = (totals[d.currency] ?? 0) + d.monthlyFee;
-  }
-  const parts = Object.entries(totals).map(([cur, amt]) => formatMoney(amt, cur));
-  return parts.length ? parts.join(" + ") : "—";
 }
 
 function fmtDate(d: Date | null): string {
@@ -50,6 +40,7 @@ export default async function DealsPage({
   ]);
 
   const isTable = sp.view === "table";
+  const baseCurrency = session.org.baseCurrency;
 
   const actions = (
     <>
@@ -66,15 +57,15 @@ export default async function DealsPage({
       {deals.length === 0 ? (
         <EmptyState title="案件がありません" description="「新規案件」から最初の案件を登録しましょう。" />
       ) : isTable ? (
-        <TableView deals={deals} services={services} filter={sp} />
+        <TableView deals={deals} services={services} filter={sp} baseCurrency={baseCurrency} />
       ) : (
-        <BoardView deals={deals} />
+        <BoardView deals={deals} baseCurrency={baseCurrency} />
       )}
     </>
   );
 }
 
-function BoardView({ deals }: { deals: DealWithRels[] }) {
+function BoardView({ deals, baseCurrency }: { deals: DealWithRels[]; baseCurrency: string }) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
       {DEAL_STAGES.map((stage) => {
@@ -98,11 +89,10 @@ function BoardView({ deals }: { deals: DealWithRels[] }) {
                   {stageDeals.length}件
                 </span>
               </div>
-              <p className="mt-1 text-xs text-slate-500">月額計 {sumByCurrency(stageDeals)}</p>
             </div>
             <div className="flex flex-col gap-2">
               {stageDeals.map((d) => (
-                <DealCard key={d.id} deal={d} />
+                <DealCard key={d.id} deal={d} baseCurrency={baseCurrency} />
               ))}
             </div>
           </div>
@@ -112,7 +102,7 @@ function BoardView({ deals }: { deals: DealWithRels[] }) {
   );
 }
 
-function DealCard({ deal }: { deal: DealWithRels }) {
+function DealCard({ deal, baseCurrency }: { deal: DealWithRels; baseCurrency: string }) {
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition hover:border-akane-300 hover:shadow">
       <Link href={`/deals/${deal.id}`} className="block">
@@ -122,16 +112,32 @@ function DealCard({ deal }: { deal: DealWithRels }) {
           <p className="mt-1 text-xs text-slate-500">{deal.service.name}</p>
         )}
         <div className="mt-2 space-y-0.5 text-xs text-slate-600">
-          <p>月額 {formatMoney(deal.monthlyFee, deal.currency)}</p>
-          {deal.initialFee > 0 && <p>初期 {formatMoney(deal.initialFee, deal.currency)}</p>}
+          <p>月額 {formatMoney(deal.monthlyFee, baseCurrency)}</p>
+          {deal.initialFee > 0 && <p>初期 {formatMoney(deal.initialFee, baseCurrency)}</p>}
         </div>
         <div className="mt-2 flex items-center justify-between text-xs text-slate-400">
           <span>確度 {deal.probability}%</span>
           {deal.expectedCloseDate && <span>{fmtDate(deal.expectedCloseDate)}</span>}
         </div>
       </Link>
-      <div className="mt-2">
+      <div className="mt-2 space-y-1.5">
         <StageSelect dealId={deal.id} stage={deal.stage} />
+        {deal.stage === "WON" && (
+          deal.contracts.length > 0 ? (
+            <Link
+              href={`/contracts/${deal.contracts[0].id}`}
+              className="block rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-center text-xs font-medium text-emerald-700 hover:bg-emerald-100"
+            >
+              → 契約手続きを見る
+            </Link>
+          ) : (
+            <form action={startContractFromDeal.bind(null, deal.id)}>
+              <button type="submit" className={`${btnPrimary} w-full justify-center py-1 text-xs`}>
+                契約手続きを開始
+              </button>
+            </form>
+          )
+        )}
       </div>
     </div>
   );
@@ -141,10 +147,12 @@ function TableView({
   deals,
   services,
   filter,
+  baseCurrency,
 }: {
   deals: DealWithRels[];
   services: { id: string; name: string }[];
   filter: { stage?: string; serviceId?: string };
+  baseCurrency: string;
 }) {
   const filtered = deals.filter((d) => {
     if (filter.stage && d.stage !== filter.stage) return false;
@@ -209,7 +217,7 @@ function TableView({
                 </td>
                 <td className="px-4 py-3 text-slate-600">{d.service?.name ?? "—"}</td>
                 <td className="px-4 py-3 text-right text-slate-700">
-                  {formatMoney(d.monthlyFee, d.currency)}
+                  {formatMoney(d.monthlyFee, baseCurrency)}
                 </td>
                 <td className="px-4 py-3 text-right text-slate-600">{d.probability}%</td>
                 <td className="px-4 py-3 text-slate-600">{fmtDate(d.expectedCloseDate) || "—"}</td>

@@ -31,7 +31,7 @@ export default async function NewContractPage({
     db.plan.findMany({
       where: { service: { orgId }, active: true },
       orderBy: { sortOrder: "asc" },
-      select: { id: true, serviceId: true, name: true, currency: true, initialFee: true, monthlyFee: true },
+      select: { id: true, serviceId: true, name: true, initialFee: true, monthlyFee: true },
     }),
   ]);
 
@@ -46,7 +46,6 @@ export default async function NewContractPage({
     customerId: deal?.customerId ?? "",
     serviceId: deal?.serviceId ?? "",
     planId: deal?.planId ?? "",
-    currency: deal?.currency ?? "JPY",
     initialFee: deal?.initialFee ?? 0,
     monthlyFee: deal?.monthlyFee ?? 0,
     startDate: todayInput(),

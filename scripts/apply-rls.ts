@@ -30,12 +30,14 @@ const ORG_TABLES = [
   "MonthlyValue",
   "CustomFieldDef",
   "Template",
+  "ContractStepDef",
 ];
 
 // 親テーブル経由で分離される子テーブル: [テーブル, 親参照カラム, 親テーブル]
 const CHILD_TABLES: Array<[string, string, string]> = [
   ["Plan", "serviceId", "Service"],
   ["Contact", "customerId", "Customer"],
+  ["ContractStep", "contractId", "Contract"],
 ];
 
 // dbAdmin (postgres ロール) からのみ触るテーブル: RLS を有効化しポリシーを与えない

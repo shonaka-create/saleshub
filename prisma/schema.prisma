@@ -18,8 +18,7 @@ datasource db {
 model Organization {
   id           String   @id @default(cuid())
   name         String
-  baseCurrency String   @default("JPY") // ダッシュボード集計時の基準通貨
-  fxRates      String   @default("{\"AUD\":95,\"USD\":150}") // 基準通貨への換算レート JSON
+  baseCurrency String   @default("JPY") // 全金額をこの通貨として扱う (売上管理・ダッシュボード・契約・案件共通)
   settings     String   @default("{}") // 機能カスタマイズ用 JSON (経営分析の閾値設定などもここ)
   createdAt    DateTime @default(now())
 
@@ -47,6 +46,7 @@ model Organization {
   activities        Activity[]
   customFieldDefs   CustomFieldDef[]
   templates         Template[]
+  contractStepDefs  ContractStepDef[]
 }
 
 // 認証は Supabase Auth。id は auth.users.id (UUID) と一致させ、ここはプロフィール情報のみ持つ。
@@ -123,7 +123,6 @@ model Plan {
   id         String  @id @default(cuid())
   serviceId  String
   name       String // 例: Plan A / Plan B / Pro
-  currency   String  @default("AUD") // JPY | AUD
   initialFee Float   @default(0)
   monthlyFee Float   @default(0)
   active     Boolean @default(true)
@@ -199,7 +198,6 @@ model Deal {
   stage             String    @default("LEAD") // LEAD | NEGOTIATION | PROPOSAL | WON | LOST
   serviceId         String?
   planId            String?
-  currency          String    @default("JPY")
   initialFee        Float     @default(0)
   monthlyFee        Float     @default(0)
   probability       Int       @default(50) // 受注確度 %
@@ -230,7 +228,6 @@ model Contract {
   serviceId  String
   planId     String?
   name       String
-  currency   String    @default("JPY")
   initialFee Float     @default(0) // 開始月に計上
   monthlyFee Float     @default(0) // 開始月〜終了月に毎月計上
   startDate  DateTime
@@ -244,6 +241,33 @@ model Contract {
   deal     Deal?        @relation(fields: [dealId], references: [id], onDelete: SetNull)
   service  Service      @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   plan     Plan?        @relation(fields: [planId], references: [id], onDelete: SetNull)
+  steps    ContractStep[]
+}
+
+// ===== 契約手続きワークフロー (組織共通のチェックリストテンプレート) =====
+
+model ContractStepDef {
+  id        String @id @default(cuid())
+  orgId     String
+  label     String // 例: 契約書送付, 署名回収, 初期費用請求, 入金確認, キックオフMTG
+  sortOrder Int    @default(0)
+
+  org   Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  steps ContractStep[]
+}
+
+// 契約ごとの手続き完了状況。テンプレートに手順が追加された際は
+// 遅延同期 (lib/contract-steps.ts) で不足分を補完する。
+model ContractStep {
+  id          String    @id @default(cuid())
+  contractId  String
+  stepDefId   String
+  completedAt DateTime?
+
+  contract Contract        @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  stepDef  ContractStepDef @relation(fields: [stepDefId], references: [id], onDelete: Cascade)
+
+  @@unique([contractId, stepDefId])
 }
 
 // ===== 売上管理 (手入力・上書き・経費) =====
