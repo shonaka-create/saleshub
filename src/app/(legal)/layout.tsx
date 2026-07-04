@@ -15,6 +15,9 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
             <Link href="/privacy" className="hover:text-akane-600 hover:underline">
               個人情報保護方針
             </Link>
+            <Link href="/tokushoho" className="hover:text-akane-600 hover:underline">
+              特定商取引法に基づく表記
+            </Link>
           </nav>
         </div>
       </header>
