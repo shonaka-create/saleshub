@@ -80,6 +80,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               ログアウト
             </button>
           </form>
+          {/* 法務ページへのリンク (利用規約・プライバシー・特商法) */}
+          <p className="mt-3 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-slate-400">
+            <Link href="/terms" target="_blank" className="hover:text-akane-600 hover:underline">
+              利用規約
+            </Link>
+            <Link href="/privacy" target="_blank" className="hover:text-akane-600 hover:underline">
+              個人情報保護方針
+            </Link>
+            <Link href="/tokushoho" target="_blank" className="hover:text-akane-600 hover:underline">
+              特定商取引法に基づく表記
+            </Link>
+          </p>
         </div>
       </aside>
 

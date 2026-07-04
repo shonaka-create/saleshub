@@ -112,6 +112,11 @@ export default function RegisterPage() {
             ログイン
           </Link>
         </p>
+        <p className="mt-4 text-center text-[11px] text-slate-400">
+          <Link href="/tokushoho" target="_blank" className="hover:text-akane-600 hover:underline">
+            特定商取引法に基づく表記
+          </Link>
+        </p>
       </form>
     </div>
   );

@@ -179,6 +179,8 @@ export default async function BillingPage({
               <Link href="/terms" className="hover:underline">利用規約</Link>
               {" ・ "}
               <Link href="/privacy" className="hover:underline">個人情報保護方針</Link>
+              {" ・ "}
+              <Link href="/tokushoho" className="hover:underline">特定商取引法に基づく表記</Link>
             </span>
             <form action={logout}>
               <button className="font-medium text-slate-500 hover:text-akane-600">ログアウト</button>
