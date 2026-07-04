@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireSession, isAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { baseStatus, BASE_PRICE_JPY, seatTotal, EARLY_BIRD_DEADLINE, isEarlyBird } from "@/lib/pricing";
-import { PRO_PRICE_JPY, MAX_PRO_PRICE_JPY, TEAM_PRICE_JPY } from "@/lib/plan";
+import { PRO_PRICE_JPY, TEAM_PRICE_JPY } from "@/lib/plan";
 import { startBaseCheckout, openBaseBillingPortal } from "@/app/actions/base-billing";
 import { logout } from "@/app/(auth)/actions";
 import { btnSecondary } from "@/components/ui";
@@ -189,7 +189,7 @@ export default async function BillingPage({
         </div>
       </div>
 
-      {/* 料金プラン一覧 (基本 → Pro → MAX → for Team) */}
+      {/* 料金プラン一覧 (基本 → Pro → チーム機能) */}
       <section className="mt-12 w-full max-w-5xl">
         <div className="mb-6 text-center">
           <h2 className="text-lg font-bold text-slate-900">料金プラン</h2>
@@ -198,7 +198,7 @@ export default async function BillingPage({
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-3">
           {/* 基本プラン */}
           <div className="flex flex-col rounded-2xl border border-akane-200 bg-white p-6 shadow-sm ring-1 ring-akane-100">
             <span className="inline-flex w-fit items-center rounded-full bg-akane-100 px-2.5 py-0.5 text-xs font-bold text-akane-700">
@@ -248,43 +248,18 @@ export default async function BillingPage({
             </ul>
           </div>
 
-          {/* MAX プラン */}
-          <div className="flex flex-col rounded-2xl border border-violet-200 bg-white p-6 shadow-sm ring-1 ring-violet-100">
-            <span className="inline-flex w-fit items-center rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 px-2.5 py-0.5 text-xs font-bold text-white">
-              MAX プラン
-            </span>
-            <p className="mt-4 text-2xl font-bold text-slate-900">
-              +¥{MAX_PRO_PRICE_JPY.toLocaleString()}
-              <span className="text-sm font-medium text-slate-500"> / 人・月</span>
-            </p>
-            <p className="text-xs text-slate-400">Pro プランのすべて + 以下</p>
-            <ul className="mt-5 space-y-2 text-sm text-slate-700">
-              {["壁打ちCOO (専属COOとの壁打ちチャット)", "週1回のプロによるカスタマイズ"].map((f) => (
-                <li key={f} className="flex items-start gap-2">
-                  <span className="text-violet-500">◆</span>
-                  {f}
-                </li>
-              ))}
-            </ul>
-            <p className="mt-4 text-xs font-medium text-violet-600">近日公開</p>
-          </div>
-
-          {/* for Team プラン (Coming Soon) */}
+          {/* チーム機能 */}
           <div className="flex flex-col rounded-2xl border border-indigo-200 bg-white p-6 shadow-sm ring-1 ring-indigo-100">
-            <span className="inline-flex w-fit items-center rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 px-2.5 py-0.5 text-xs font-bold text-white">
-              for Team
+            <span className="inline-flex w-fit items-center rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 px-2.5 py-0.5 text-xs font-bold text-white">
+              チーム機能
             </span>
             <p className="mt-4 text-2xl font-bold text-slate-900">
               +¥{TEAM_PRICE_JPY.toLocaleString()}
               <span className="text-sm font-medium text-slate-500"> / 人・月</span>
             </p>
-            <p className="text-xs text-slate-400">MAX プランのすべて + 以下</p>
+            <p className="text-xs text-slate-400">Pro プランのすべて + 以下</p>
             <ul className="mt-5 space-y-2 text-sm text-slate-700">
-              {[
-                "請求書管理・契約書管理・委託費管理 (契約後の書類・経費ワークフロー)",
-                "チームでの壁打ちCOO共有",
-                "チーム横断の売上・コスト分析",
-              ].map((f) => (
+              {["請求書管理 (契約・売上と連動した発行・入金管理)", "契約書管理 (契約書ファイルの保管・締結状況管理)", "委託費管理 (外注先・委託先への支払い管理)"].map((f) => (
                 <li key={f} className="flex items-start gap-2">
                   <span className="text-indigo-500">◆</span>
                   {f}
@@ -296,7 +271,7 @@ export default async function BillingPage({
         </div>
 
         <p className="mt-4 text-center text-xs text-slate-400">
-          Pro・MAX・for Team は基本プランに追加してご利用いただけます。表示はすべて1メンバーあたりの月額です。
+          Pro・チーム機能 は基本プランに追加してご利用いただけます。表示はすべて1メンバーあたりの月額です。
         </p>
       </section>
     </div>

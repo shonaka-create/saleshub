@@ -15,8 +15,8 @@ const links = [
   { href: "/templates", label: "テンプレート", icon: "📁", pro: true },
   // TEAM プラン — 請求書・契約書・委託費管理を一連のワークフローとしてまとめて提供 (Coming Soon)
   { href: "/team", label: "チーム機能", icon: "🤝", team: true },
-  // MAX プラン
-  { href: "/advisor", label: "壁打ちCOO", icon: "🧑‍💼", maxPro: true },
+  // 壁打ちCOO (MAX プラン) は一旦非表示 (2026-07-04)。ページ自体 (/advisor) は残しているので
+  // 再公開する際はここに { href: "/advisor", label: "壁打ちCOO", icon: "🧑‍💼", maxPro: true } を戻す
   { href: "/settings", label: "設定", icon: "⚙️" },
 ] as { href: string; label: string; icon: string; pro?: boolean; maxPro?: boolean; team?: boolean; soon?: boolean }[];
 
