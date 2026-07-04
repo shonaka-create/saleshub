@@ -59,15 +59,32 @@ export async function POST(req: Request) {
           });
           await logEvent(orgId, "BASE_SUBSCRIBED", "基本プラン (月額500円) 課金開始");
         } else {
+          // トライアル付き Checkout の場合はサブスクリプションから trial_end を取得して保存する
+          let trialEnd: Date | null = null;
+          if (subscriptionId) {
+            try {
+              const sub = await stripe.subscriptions.retrieve(subscriptionId);
+              if (sub.trial_end) trialEnd = new Date(sub.trial_end * 1000);
+            } catch {
+              /* trial なしとして扱う */
+            }
+          }
           await dbAdmin.organization.updateMany({
             where: { id: orgId },
             data: {
               plan: "PRO",
               stripeSubscriptionId: subscriptionId,
+              ...(trialEnd ? { trialEndsAt: trialEnd } : {}),
               ...(customerId ? { stripeCustomerId: customerId } : {}),
             },
           });
-          await logEvent(orgId, "PRO_SUBSCRIBED", "Pro プラン (経営分析・月額490円) 課金開始");
+          await logEvent(
+            orgId,
+            trialEnd ? "PRO_TRIAL_STARTED" : "PRO_SUBSCRIBED",
+            trialEnd
+              ? `Pro 14日無料トライアル開始 (カード登録済み、${trialEnd.toISOString().slice(0, 10)} 以降 月額490円)`
+              : "Pro プラン (経営分析・月額490円) 課金開始"
+          );
         }
       }
       break;
@@ -92,9 +109,15 @@ export async function POST(req: Request) {
           data: {
             plan: active ? "PRO" : "FREE",
             stripeSubscriptionId: sub.id,
+            // trial_end を同期 (トライアル中は未来日付、課金移行後は過去日付になり自然に「トライアル終了」扱い)
+            ...(sub.trial_end ? { trialEndsAt: new Date(sub.trial_end * 1000) } : {}),
             ...(typeof sub.customer === "string" ? { stripeCustomerId: sub.customer } : {}),
           },
         });
+        // トライアル終了 → 課金開始への移行をログに残す
+        if (sub.status === "active" && event.data.previous_attributes && "status" in event.data.previous_attributes && event.data.previous_attributes.status === "trialing") {
+          await logEvent(orgId, "PRO_TRIAL_CONVERTED", "Pro トライアル終了 → 月額490円の課金開始");
+        }
       }
       break;
     }
@@ -115,12 +138,18 @@ export async function POST(req: Request) {
           });
         }
       } else {
+        // トライアル中の解約は課金前のキャンセル (料金は一切発生しない)
+        const canceledInTrial = sub.trial_end != null && sub.trial_end * 1000 > Date.now();
         if (orgId) {
           await dbAdmin.organization.updateMany({
             where: { id: orgId },
             data: { plan: "FREE", stripeSubscriptionId: null },
           });
-          await logEvent(orgId, "PRO_CANCELED", "Pro プランを解約");
+          await logEvent(
+            orgId,
+            canceledInTrial ? "PRO_TRIAL_CANCELED" : "PRO_CANCELED",
+            canceledInTrial ? "Pro トライアル中に解約 (課金なし)" : "Pro プランを解約"
+          );
         } else {
           // metadata に orgId がない場合はサブスクリプション ID で照合
           await dbAdmin.organization.updateMany({

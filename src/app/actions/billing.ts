@@ -2,11 +2,64 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
+import { db, dbAdmin } from "@/lib/db";
 import { requireSession, isAdmin } from "@/lib/auth";
 import { getStripe, proPriceId, appUrl } from "@/lib/stripe";
+import { TRIAL_DAYS } from "@/lib/plan";
 
 // ===== Pro プラン課金 (Stripe) =====
+
+// 14日無料トライアルを開始する (Stripe Checkout 経由)。
+// - カード情報の登録と「トライアル終了後は自動的に月額課金が始まる」ことへの
+//   明示的な同意 (consent チェックボックス) を得てから Stripe へ遷移する
+// - トライアルは1組織1回のみ (trialEndsAt != null なら消費済み)
+// - トライアル中に解約すれば Stripe のサブスクリプションが終了し、一切課金されない
+export async function startProTrialCheckout(formData: FormData) {
+  const session = await requireSession();
+  if (!isAdmin(session.role)) redirect("/dashboard?billing=forbidden");
+  if (formData.get("consent") !== "on") redirect("/dashboard?billing=consent");
+
+  const stripe = getStripe();
+  const price = proPriceId();
+  if (!stripe || !price) redirect("/dashboard?billing=unconfigured");
+
+  const org = await db.organization.findUniqueOrThrow({
+    where: { id: session.org.id },
+    select: { id: true, plan: true, trialEndsAt: true, stripeCustomerId: true },
+  });
+  if (org.plan === "PRO" || org.trialEndsAt != null) redirect("/dashboard");
+
+  const checkout = await stripe.checkout.sessions.create({
+    mode: "subscription",
+    line_items: [{ price, quantity: 1 }],
+    payment_method_collection: "always", // トライアルでもカード情報を必ず収集する
+    client_reference_id: org.id,
+    ...(org.stripeCustomerId
+      ? { customer: org.stripeCustomerId }
+      : { customer_email: session.user.email }),
+    metadata: { orgId: org.id, plan: "PRO" },
+    subscription_data: {
+      trial_period_days: TRIAL_DAYS,
+      metadata: { orgId: org.id, plan: "PRO" },
+    },
+    success_url: `${appUrl()}/dashboard?trial=started`,
+    cancel_url: `${appUrl()}/dashboard`,
+  });
+
+  await dbAdmin.billingEvent
+    .create({
+      data: {
+        orgId: org.id,
+        orgName: session.org.name,
+        email: session.user.email,
+        type: "PRO_TRIAL_CONSENT",
+        detail: `トライアル開始の同意 (カード登録 + ${TRIAL_DAYS}日後の自動課金に承諾) — Checkout へ遷移`,
+      },
+    })
+    .catch(() => {});
+
+  redirect(checkout.url ?? "/dashboard");
+}
 
 // Checkout セッションを作成して Stripe の決済ページへリダイレクトする
 // (経営分析はダッシュボードに統合されたため、遷移先は /dashboard)

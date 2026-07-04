@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { db } from "@/lib/db";
 import { requireSession } from "@/lib/auth";
+import { requireProAccess } from "@/lib/plan";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { TEMPLATE_CATEGORIES } from "@/lib/constants";
 import {
@@ -33,6 +34,7 @@ export async function prepareTemplateUpload(
   fileSize: number
 ): Promise<{ path: string; token: string } | { error: string }> {
   const session = await requireSession();
+  await requireProAccess(session.org.id); // テンプレートは Pro 機能
 
   const ext = fileExtension(fileName);
   if (!(TEMPLATE_ALLOWED_EXTS as readonly string[]).includes(ext)) {
@@ -62,6 +64,7 @@ export async function finalizeTemplateUpload(input: {
   mimeType: string;
 }): Promise<{ error?: string }> {
   const session = await requireSession();
+  await requireProAccess(session.org.id); // テンプレートは Pro 機能
 
   // パス先頭の orgId で、他テナントのオブジェクトを登録できないようにする
   if (!input.path.startsWith(`${session.org.id}/`)) return { error: "不正なファイルパスです" };

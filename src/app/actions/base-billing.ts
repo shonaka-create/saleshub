@@ -1,11 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { db, dbAdmin } from "@/lib/db";
+import { db } from "@/lib/db";
 import { requireSession, isAdmin } from "@/lib/auth";
 import { getStripe, appUrl } from "@/lib/stripe";
-import { startTrial } from "@/lib/plan";
 
 // ===== 基本プラン課金 (システム利用料: 初月無料 → 月額500円) =====
 
@@ -58,21 +56,4 @@ export async function openBaseBillingPortal() {
     return_url: `${appUrl()}/billing`,
   });
   redirect(portal.url);
-}
-
-// ===== 経営分析 (Pro) の14日無料トライアルを明示的に開始する =====
-// (以前はページ閲覧で自動開始していたが、ユーザーの意図しないトライアル消費を防ぐためボタン起点に変更)
-export async function startInsightsTrial() {
-  const session = await requireSession();
-  await startTrial(session.org.id);
-  await dbAdmin.billingEvent.create({
-    data: {
-      orgId: session.org.id,
-      orgName: session.org.name,
-      email: session.user.email,
-      type: "PRO_TRIAL_STARTED",
-      detail: "経営分析14日トライアル開始",
-    },
-  });
-  revalidatePath("/dashboard");
 }

@@ -7,8 +7,12 @@ import { addMonths, currentMonthKey, formatMonthJa } from "@/lib/months";
 import { parseFxRates, toBase, formatMoney } from "@/lib/currency";
 import { DEAL_STAGE_LABELS } from "@/lib/constants";
 import { PageHeader, Card, btnPrimary, btnSecondary, inputCls, labelCls } from "@/components/ui";
-import { startProCheckout, openBillingPortal, updateInsightsSettings } from "@/app/actions/billing";
-import { startInsightsTrial } from "@/app/actions/base-billing";
+import {
+  startProCheckout,
+  startProTrialCheckout,
+  openBillingPortal,
+  updateInsightsSettings,
+} from "@/app/actions/billing";
 import { RevenueStackedChart, PipelineChart } from "./charts";
 import { PnlChart, MrrChurnChart, ContractsChart, OutsourcingChart } from "../insights/charts";
 
@@ -25,7 +29,7 @@ const PRO_FEATURES = [
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ upgraded?: string; billing?: string; base?: string }>;
+  searchParams: Promise<{ upgraded?: string; billing?: string; base?: string; trial?: string }>;
 }) {
   const session = await requireSession();
   const sp = await searchParams;
@@ -222,6 +226,18 @@ export default async function DashboardPage({
           プラン登録には管理者権限が必要です。組織のオーナーにご依頼ください。
         </div>
       )}
+      {sp.billing === "consent" && (
+        <div className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          トライアルを開始するには、トライアル終了後の自動課金に関する説明への同意が必要です。
+        </div>
+      )}
+      {sp.trial === "started" && (
+        <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          🎉 14日間の無料トライアルを開始しました。
+          {status.trialEndsAt &&
+            ` ${status.trialEndsAt.getMonth() + 1}月${status.trialEndsAt.getDate()}日までにご解約いただければ、料金は一切かかりません。`}
+        </div>
+      )}
 
       {/* ===== 基本指標 (誰でもなじみのあるデータを先頭に) ===== */}
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -234,41 +250,9 @@ export default async function DashboardPage({
         ))}
       </div>
 
-      {/* サービス別売上 */}
-      <Card className="mb-6 p-5">
-        <div className="mb-4 flex items-baseline justify-between">
-          <h2 className="text-sm font-semibold text-slate-800">サービス別 月次売上</h2>
-          <Link href="/revenue" className="text-xs font-medium text-akane-600 hover:underline">
-            売上管理 (表で見る) →
-          </Link>
-        </div>
-        <RevenueStackedChart data={chartData} services={services} hasManual={hasManual} baseCurrency={base} />
-      </Card>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* 売上・費用・利益 */}
-        <Card className="p-5">
-          <h2 className="mb-4 text-sm font-semibold text-slate-800">売上・経費・利益の推移</h2>
-          <PnlChart data={chartData} baseCurrency={base} />
-        </Card>
-
-        {/* パイプライン */}
-        <Card className="p-5">
-          <div className="mb-4 flex items-baseline justify-between">
-            <h2 className="text-sm font-semibold text-slate-800">
-              案件パイプライン ({openDeals.length}件 / 月額換算 {fmt(pipelineValue)})
-            </h2>
-            <Link href="/deals" className="text-xs font-medium text-akane-600 hover:underline">
-              案件ボードへ →
-            </Link>
-          </div>
-          <PipelineChart data={pipelineData} baseCurrency={base} />
-        </Card>
-      </div>
-
-      {/* ===== 経営分析 (Pro) ===== */}
-      <div className="mt-10 mb-4 flex items-center gap-2">
-        <h2 className="text-base font-bold text-slate-900">経営分析</h2>
+      {/* ===== グラフ・経営分析 (Pro) ===== */}
+      <div className="mt-4 mb-4 flex items-center gap-2">
+        <h2 className="text-base font-bold text-slate-900">グラフ・経営分析</h2>
         <span className="rounded-full bg-gradient-to-r from-amber-400 to-amber-500 px-2 py-0.5 text-[10px] font-bold text-white">
           PRO
         </span>
@@ -276,11 +260,35 @@ export default async function DashboardPage({
 
       {status.hasAccess ? (
         <>
-          {status.inTrial && (
+          {/* Stripe トライアル中: 終了日と解約導線を明示 (解約すれば課金なし) */}
+          {status.stripeTrialing && (
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <p className="text-sm text-amber-800">
+                ⏳ 無料トライアル中 — 残り <strong>{status.trialDaysLeft}日</strong>
+                {status.trialEndsAt &&
+                  ` (${status.trialEndsAt.getMonth() + 1}月${status.trialEndsAt.getDate()}日まで)`}
+                。終了後は自動的に月額 ¥{PRO_PRICE_JPY} の課金が始まります。
+                期限までに解約すれば<strong>料金は一切かかりません</strong>。
+              </p>
+              {admin && (
+                <form action={openBillingPortal}>
+                  <button
+                    type="submit"
+                    className="rounded-lg border border-amber-300 bg-white px-3.5 py-2 text-sm font-semibold text-amber-700 transition hover:bg-amber-100"
+                  >
+                    トライアルを終了する (解約)
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
+          {/* 旧アプリ内トライアル (カード未登録): 従来どおり登録を促す。自動課金はされない */}
+          {status.legacyTrial && (
             <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
               <p className="text-sm text-amber-800">
                 ⏳ 無料トライアル中 — 残り <strong>{status.trialDaysLeft}日</strong> ({TRIAL_DAYS}
-                日間)。終了後は Pro プラン (月額 ¥{PRO_PRICE_JPY}) が必要です。
+                日間)。カード未登録のため自動課金はされません。継続するには Pro プラン (月額 ¥
+                {PRO_PRICE_JPY}) にご登録ください。
               </p>
               {admin && (
                 <form action={startProCheckout}>
@@ -294,6 +302,38 @@ export default async function DashboardPage({
               )}
             </div>
           )}
+
+          {/* サービス別売上 */}
+          <Card className="mb-6 p-5">
+            <div className="mb-4 flex items-baseline justify-between">
+              <h2 className="text-sm font-semibold text-slate-800">サービス別 月次売上</h2>
+              <Link href="/revenue" className="text-xs font-medium text-akane-600 hover:underline">
+                売上管理 (表で見る) →
+              </Link>
+            </div>
+            <RevenueStackedChart data={chartData} services={services} hasManual={hasManual} baseCurrency={base} />
+          </Card>
+
+          <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* 売上・費用・利益 */}
+            <Card className="p-5">
+              <h2 className="mb-4 text-sm font-semibold text-slate-800">売上・経費・利益の推移</h2>
+              <PnlChart data={chartData} baseCurrency={base} />
+            </Card>
+
+            {/* パイプライン */}
+            <Card className="p-5">
+              <div className="mb-4 flex items-baseline justify-between">
+                <h2 className="text-sm font-semibold text-slate-800">
+                  案件パイプライン ({openDeals.length}件 / 月額換算 {fmt(pipelineValue)})
+                </h2>
+                <Link href="/deals" className="text-xs font-medium text-akane-600 hover:underline">
+                  案件ボードへ →
+                </Link>
+              </div>
+              <PipelineChart data={pipelineData} baseCurrency={base} />
+            </Card>
+          </div>
 
           {/* アラート */}
           {report.alerts.length > 0 && (
@@ -407,28 +447,71 @@ export default async function DashboardPage({
           </div>
         </>
       ) : status.trialAvailable ? (
-        /* トライアル未開始: 明示的に開始してもらう */
-        <Card className="p-8 text-center">
-          <p className="text-3xl">📈</p>
-          <h3 className="mt-3 text-lg font-bold text-slate-900">
-            経営分析を14日間無料で試せます
-          </h3>
-          <p className="mt-2 text-sm text-slate-500">
-            トライアル終了後は月額 ¥{PRO_PRICE_JPY} (基本プランとは別途)。自動課金はされません。
-          </p>
-          <ul className="mx-auto mt-5 max-w-sm space-y-2 text-left text-sm text-slate-700">
-            {PRO_FEATURES.map((f) => (
+        /* トライアル未開始: カード登録 + 継続課金への同意を得てから Stripe Checkout へ */
+        <Card className="p-8">
+          <div className="text-center">
+            <p className="text-3xl">📈</p>
+            <h3 className="mt-3 text-lg font-bold text-slate-900">
+              グラフ・経営分析を14日間無料で試せます
+            </h3>
+            <p className="mt-2 text-sm text-slate-500">
+              Pro プラン (月額 ¥{PRO_PRICE_JPY} 税込・基本プランとは別途) の全機能をお試しいただけます。
+            </p>
+          </div>
+          <ul className="mx-auto mt-5 max-w-sm space-y-2 text-sm text-slate-700">
+            {[
+              "サービス別売上・損益・案件パイプラインのグラフ",
+              ...PRO_FEATURES,
+            ].map((f) => (
               <li key={f} className="flex items-start gap-2">
                 <span className="text-emerald-600">✓</span>
                 {f}
               </li>
             ))}
           </ul>
-          <form action={startInsightsTrial} className="mt-6">
-            <button type="submit" className={btnPrimary}>
-              14日間無料トライアルを開始
-            </button>
-          </form>
+
+          {/* トライアル開始前のご案内 (課金情報の収集と継続課金について) */}
+          <div className="mx-auto mt-6 max-w-md rounded-xl border border-amber-200 bg-amber-50 p-4 text-left">
+            <p className="text-sm font-bold text-amber-900">トライアル開始前にご確認ください</p>
+            <ul className="mt-2 space-y-1.5 text-xs leading-relaxed text-amber-800">
+              <li>
+                ・トライアルの開始には<strong>クレジットカード情報の登録</strong>が必要です (Stripe
+                の安全な決済ページで入力します)
+              </li>
+              <li>
+                ・{TRIAL_DAYS}日間の無料期間が終了すると、
+                <strong>自動的に月額 ¥{PRO_PRICE_JPY} (税込) の継続課金が始まります</strong>
+              </li>
+              <li>
+                ・トライアル中はいつでも解約できます。
+                <strong>期間内に解約すれば料金は一切かかりません</strong>
+                (解約はこのページの「トライアルを終了する」ボタンからいつでも行えます)
+              </li>
+              <li>・無料トライアルは1組織につき1回のみです</li>
+            </ul>
+          </div>
+
+          {admin ? (
+            <form action={startProTrialCheckout} className="mx-auto mt-5 max-w-md text-center">
+              <label className="flex items-start justify-center gap-2 text-left text-xs text-slate-600">
+                <input type="checkbox" name="consent" required className="mt-0.5" />
+                <span>
+                  上記の内容 (カード情報の登録・トライアル終了後の自動課金・解約方法)
+                  を確認し、同意します
+                </span>
+              </label>
+              <button type="submit" className={`${btnPrimary} mt-4`}>
+                同意してカードを登録し、14日間無料トライアルを開始
+              </button>
+              <p className="mt-2 text-[11px] text-slate-400">
+                Stripe の決済ページに移動します。トライアル期間中は請求されません。
+              </p>
+            </form>
+          ) : (
+            <p className="mt-6 text-center text-xs text-slate-400">
+              トライアルの開始には管理者権限が必要です。組織のオーナーにご依頼ください。
+            </p>
+          )}
         </Card>
       ) : (
         /* トライアル終了 & 未契約 */

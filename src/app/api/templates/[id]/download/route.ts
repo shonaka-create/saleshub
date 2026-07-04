@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { planStatus } from "@/lib/plan";
 import { db } from "@/lib/db";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { TEMPLATE_BUCKET } from "@/lib/templates";
@@ -10,6 +11,15 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params;
   const session = await getSession();
   if (!session) return new NextResponse("Unauthorized", { status: 401 });
+
+  // テンプレートは Pro 機能 (トライアル含む)
+  const org = await db.organization.findUniqueOrThrow({
+    where: { id: session.org.id },
+    select: { plan: true, trialEndsAt: true },
+  });
+  if (!planStatus(org).hasAccess) {
+    return new NextResponse("Pro プランへの登録が必要です", { status: 403 });
+  }
 
   const template = await db.template.findFirst({ where: { id, orgId: session.org.id } });
   if (!template) return new NextResponse("Not Found", { status: 404 });
