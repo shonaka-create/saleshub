@@ -29,18 +29,27 @@ const ORG_TABLES = [
   "ExpenseCategory",
   "MonthlyValue",
   "CustomFieldDef",
-  "DataSource",
-  "Dataset",
+  "Template",
 ];
 
 // 親テーブル経由で分離される子テーブル: [テーブル, 親参照カラム, 親テーブル]
 const CHILD_TABLES: Array<[string, string, string]> = [
   ["Plan", "serviceId", "Service"],
   ["Contact", "customerId", "Customer"],
-  ["DataRow", "datasetId", "Dataset"],
 ];
 
-const ALL_TABLES = ["User", "Organization", "Membership", ...ORG_TABLES, ...CHILD_TABLES.map(([t]) => t)];
+// dbAdmin (postgres ロール) からのみ触るテーブル: RLS を有効化しポリシーを与えない
+// → akane_app からは一切アクセス不可になる (システム管理者向け利用ログ等)
+const ADMIN_ONLY_TABLES = ["BillingEvent"];
+
+const ALL_TABLES = [
+  "User",
+  "Organization",
+  "Membership",
+  ...ORG_TABLES,
+  ...CHILD_TABLES.map(([t]) => t),
+  ...ADMIN_ONLY_TABLES,
+];
 
 const quotedPassword = appPassword.replace(/'/g, "''");
 

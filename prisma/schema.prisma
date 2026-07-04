@@ -23,9 +23,16 @@ model Organization {
   settings     String   @default("{}") // 機能カスタマイズ用 JSON (経営分析の閾値設定などもここ)
   createdAt    DateTime @default(now())
 
+  // ===== 基本プラン (システム利用料: 初月無料 → 月額500円) =====
+  // 無料期間は登録時に確定する。2026-07-15 (JST) までの登録 (earlyBird) は3ヶ月無料。
+  basePlanStatus           String    @default("FREE") // FREE (未課金) | ACTIVE (課金中) | CANCELED (解約済)
+  freeUntil                DateTime? // 無料期間の終了日時 (期限切れ & 未課金なら利用停止)
+  earlyBird                Boolean   @default(false) // 早期登録特典 (3ヶ月無料) 対象
+  stripeBaseSubscriptionId String?
+
   // ===== Pro プラン (経営分析) =====
   plan                 String    @default("FREE") // FREE | PRO
-  trialEndsAt          DateTime? // 経営分析の14日無料トライアル終了日時 (初回アクセス時に設定)
+  trialEndsAt          DateTime? // 経営分析の14日無料トライアル終了日時 (ボタンから明示的に開始)
   stripeCustomerId     String?
   stripeSubscriptionId String?
 
@@ -39,19 +46,34 @@ model Organization {
   expenseCategories ExpenseCategory[]
   activities        Activity[]
   customFieldDefs   CustomFieldDef[]
-  dataSources       DataSource[]
-  datasets          Dataset[]
+  templates         Template[]
 }
 
 // 認証は Supabase Auth。id は auth.users.id (UUID) と一致させ、ここはプロフィール情報のみ持つ。
 model User {
-  id        String   @id
-  email     String   @unique
-  name      String
-  createdAt DateTime @default(now())
+  id              String    @id
+  email           String    @unique
+  name            String
+  isSystemAdmin   Boolean   @default(false) // サービス運営者 (/admin で全テナントの利用状況を閲覧可)
+  termsAcceptedAt DateTime? // 利用規約・個人情報保護方針への同意日時 (登録時に記録)
+  createdAt       DateTime  @default(now())
 
   memberships Membership[]
   activities  Activity[]
+}
+
+// サービス利用ログ (登録・課金・解約)。システム管理者画面専用で dbAdmin からのみ読み書きする。
+// RLS は有効化しポリシーを与えない (akane_app からはアクセス不可)。
+model BillingEvent {
+  id        String   @id @default(cuid())
+  orgId     String? // 組織削除後もログを残すため外部キーにしない
+  orgName   String?
+  email     String? // 操作したユーザーのメール
+  type      String // REGISTER | BASE_SUBSCRIBED | BASE_CANCELED | PRO_SUBSCRIBED | PRO_CANCELED | PRO_TRIAL_STARTED
+  detail    String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 model Membership {
@@ -275,39 +297,23 @@ model CustomFieldDef {
   @@unique([orgId, entity, key])
 }
 
-// ===== データ連携 (GA / MCP 等の受け皿) =====
+// ===== テンプレートライブラリ (Word/PPT/Excel/PDF 等のファイル保管庫) =====
+// 実ファイルは Supabase Storage の "templates" バケットに保存し、ここはメタデータのみ持つ。
+// filePath は "{orgId}/{uuid}.{ext}" 形式で、パス先頭の orgId によってテナントを分離する。
 
-model DataSource {
-  id        String   @id @default(cuid())
-  orgId     String
-  name      String
-  type      String   @default("MANUAL") // MANUAL | GA4 | CSV | MCP
-  config    String   @default("{}")
-  createdAt DateTime @default(now())
+model Template {
+  id            String   @id @default(cuid())
+  orgId         String
+  name          String
+  description   String?
+  category      String   @default("OTHER") // PROPOSAL | QUOTE | CONTRACT | INVOICE | REPORT | OTHER
+  fileName      String // 元のファイル名 (ダウンロード時のファイル名に使う)
+  filePath      String // Supabase Storage 上のオブジェクトキー
+  mimeType      String   @default("application/octet-stream")
+  fileSize      Int      @default(0) // バイト
+  downloadCount Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  org      Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  datasets Dataset[]
-}
-
-model Dataset {
-  id        String   @id @default(cuid())
-  orgId     String
-  sourceId  String?
-  name      String
-  columns   String   @default("[]") // [{key,label,type}] JSON
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  org    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  source DataSource?  @relation(fields: [sourceId], references: [id], onDelete: SetNull)
-  rows   DataRow[]
-}
-
-model DataRow {
-  id        String @id @default(cuid())
-  datasetId String
-  rowIndex  Int    @default(0)
-  data      String @default("{}") // 列key→値 JSON
-
-  dataset Dataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 }

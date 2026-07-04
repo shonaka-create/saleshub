@@ -1,5 +1,5 @@
 import "server-only";
-import { buildRevenueReport } from "./revenue";
+import { buildRevenueReport, type RevenueReport } from "./revenue";
 import { addMonths, currentMonthKey } from "./months";
 import { parseInsightsSettings, type InsightsSettings } from "./plan";
 
@@ -22,7 +22,11 @@ export type InsightsReport = {
   revenue: Record<string, number>;
   expense: Record<string, number>;
   profit: Record<string, number>;
+  cumulativeProfit: Record<string, number>;
   mrr: Record<string, number>;
+  // ダッシュボード統合用: サービス別売上の内訳行 (売上管理と同じ計算結果)
+  serviceRows: RevenueReport["serviceRows"];
+  manualRows: RevenueReport["manualRows"];
   activeContracts: Record<string, number>;
   newContracts: Record<string, number>;
   churnedContracts: Record<string, number>;
@@ -174,7 +178,10 @@ export async function buildInsightsReport(
     revenue: report.revenueTotal,
     expense: report.expenseTotal,
     profit: report.profit,
+    cumulativeProfit: report.cumulativeProfit,
     mrr: report.mrr,
+    serviceRows: report.serviceRows,
+    manualRows: report.manualRows,
     activeContracts,
     newContracts,
     churnedContracts,

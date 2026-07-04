@@ -48,15 +48,39 @@ export async function register(_prev: AuthState, formData: FormData): Promise<Au
   const orgName = String(formData.get("orgName") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
+  const agreed = formData.get("agree") === "on";
 
   if (!name || !orgName || !email || password.length < 8) {
     return { error: "全項目を入力してください (パスワードは8文字以上)" };
+  }
+  if (!agreed) {
+    return { error: "利用規約と個人情報保護方針への同意が必要です" };
   }
 
   const created = await createAuthUser(email, password, name);
   if ("error" in created) return created;
 
+  // 規約同意の記録 (いつの時点の同意かを証跡として残す)
+  await dbAdmin.user.update({
+    where: { id: created.userId },
+    data: { termsAcceptedAt: new Date() },
+  });
+
   const org = await createOrganizationWithDefaults(orgName, created.userId);
+
+  // システム管理者向けの利用ログ
+  await dbAdmin.billingEvent
+    .create({
+      data: {
+        orgId: org.id,
+        orgName: org.name,
+        email,
+        type: "REGISTER",
+        detail: org.earlyBird ? "早期登録特典 (3ヶ月無料)" : "通常登録 (初月無料)",
+      },
+    })
+    .catch(() => {}); // ログ失敗で登録自体を止めない
+
   const signInError = await signIn(email, password);
   if (signInError) return { error: "アカウントは作成されました。ログイン画面からログインしてください" };
   await setCurrentOrgCookie(org.id);

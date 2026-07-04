@@ -1,13 +1,18 @@
 import { dbAdmin as db } from "./db";
+import { computeFreeUntil } from "./pricing";
 
 // 新規組織作成時の初期マスタ投入 (AKANE WEB STUDIO のサービス構成を既定値とする)
 // メンバーシップ成立前に実行されるため RLS をバイパスする dbAdmin を使う。
 export async function createOrganizationWithDefaults(name: string, ownerUserId: string) {
+  // 基本プランの無料期間を登録時点で確定する (早期登録なら3ヶ月、通常は初月無料)
+  const { freeUntil, earlyBird } = computeFreeUntil(new Date());
   const org = await db.organization.create({
     data: {
       name,
       baseCurrency: "JPY",
       fxRates: JSON.stringify({ AUD: 95, USD: 150 }),
+      freeUntil,
+      earlyBird,
       memberships: { create: { userId: ownerUserId, role: "OWNER" } },
     },
   });
@@ -80,15 +85,6 @@ export async function createOrganizationWithDefaults(name: string, ownerUserId: 
       { orgId: org.id, name: "サーバー・インフラ・ツール費", sortOrder: 2 },
       { orgId: org.id, name: "地代家賃・その他経費", sortOrder: 3 },
     ],
-  });
-
-  await db.dataSource.create({
-    data: {
-      orgId: org.id,
-      name: "Google Analytics 4 (今後MCP連携予定)",
-      type: "GA4",
-      config: JSON.stringify({ note: "MCP経由でのデータ取込を想定した受け皿" }),
-    },
   });
 
   return org;

@@ -106,6 +106,12 @@ export async function updateContract(
   // 解約 (ENDED) で終了日未指定なら当日を終了日とする
   if (status === "ENDED" && !endDate) endDate = new Date();
 
+  // 終了日が開始日より前だと売上計上が一切されず「データが消えた」ように見えるため弾く
+  const effectiveStart = startRaw ? new Date(startRaw) : existing.startDate;
+  if (endDate && endDate < effectiveStart) {
+    return { error: "終了日は開始日以降の日付を指定してください" };
+  }
+
   await db.contract.update({
     where: { id },
     data: {

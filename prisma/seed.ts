@@ -146,32 +146,6 @@ async function main() {
     ],
   });
 
-  // --- GAデータのサンプルデータセット (MCP連携の受け皿デモ) ---
-  const source = await db.dataSource.findFirst({ where: { orgId: org.id } });
-  const dataset = await db.dataset.create({
-    data: {
-      orgId: org.id,
-      sourceId: source?.id,
-      name: "akane-web-studio.vercel.app 月次トラフィック",
-      columns: JSON.stringify([
-        { key: "month", label: "月", type: "text" },
-        { key: "users", label: "ユーザー数", type: "number" },
-        { key: "sessions", label: "セッション数", type: "number" },
-        { key: "inquiries", label: "問い合わせ数", type: "number" },
-      ]),
-    },
-  });
-  const trafficRows = [
-    { month: mk(-2), users: 320, sessions: 410, inquiries: 3 },
-    { month: mk(-1), users: 450, sessions: 590, inquiries: 5 },
-    { month: mk(0), users: 610, sessions: 800, inquiries: 8 },
-  ];
-  for (let i = 0; i < trafficRows.length; i++) {
-    await db.dataRow.create({
-      data: { datasetId: dataset.id, rowIndex: i, data: JSON.stringify(trafficRows[i]) },
-    });
-  }
-
   console.log("デモデータ投入完了: demo@akane.studio / akane1234");
 }
 

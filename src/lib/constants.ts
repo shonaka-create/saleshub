@@ -84,10 +84,12 @@ export const CUSTOM_FIELD_TYPE_LABELS: Record<string, string> = {
   select: "選択式",
 };
 
-export const DATA_SOURCE_TYPES = ["MANUAL", "GA4", "CSV", "MCP"] as const;
-export const DATA_SOURCE_TYPE_LABELS: Record<string, string> = {
-  MANUAL: "手入力",
-  GA4: "Google Analytics 4",
-  CSV: "CSVインポート",
-  MCP: "MCP連携",
+export const TEMPLATE_CATEGORIES = ["PROPOSAL", "QUOTE", "CONTRACT", "INVOICE", "REPORT", "OTHER"] as const;
+export const TEMPLATE_CATEGORY_LABELS: Record<string, string> = {
+  PROPOSAL: "提案書",
+  QUOTE: "見積書",
+  CONTRACT: "契約書",
+  INVOICE: "請求書",
+  REPORT: "議事録・報告書",
+  OTHER: "その他",
 };

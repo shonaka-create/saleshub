@@ -9,13 +9,14 @@ import { getStripe, proPriceId, appUrl } from "@/lib/stripe";
 // ===== Pro プラン課金 (Stripe) =====
 
 // Checkout セッションを作成して Stripe の決済ページへリダイレクトする
+// (経営分析はダッシュボードに統合されたため、遷移先は /dashboard)
 export async function startProCheckout() {
   const session = await requireSession();
-  if (!isAdmin(session.role)) redirect("/insights?billing=forbidden");
+  if (!isAdmin(session.role)) redirect("/dashboard?billing=forbidden");
 
   const stripe = getStripe();
   const price = proPriceId();
-  if (!stripe || !price) redirect("/insights?billing=unconfigured");
+  if (!stripe || !price) redirect("/dashboard?billing=unconfigured");
 
   const org = await db.organization.findUniqueOrThrow({
     where: { id: session.org.id },
@@ -29,31 +30,32 @@ export async function startProCheckout() {
     ...(org.stripeCustomerId
       ? { customer: org.stripeCustomerId }
       : { customer_email: session.user.email }),
-    subscription_data: { metadata: { orgId: org.id } },
-    success_url: `${appUrl()}/insights?upgraded=1`,
-    cancel_url: `${appUrl()}/insights`,
+    metadata: { orgId: org.id, plan: "PRO" },
+    subscription_data: { metadata: { orgId: org.id, plan: "PRO" } },
+    success_url: `${appUrl()}/dashboard?upgraded=1`,
+    cancel_url: `${appUrl()}/dashboard`,
   });
 
-  redirect(checkout.url ?? "/insights");
+  redirect(checkout.url ?? "/dashboard");
 }
 
 // Stripe カスタマーポータル (支払い方法変更・解約) へリダイレクトする
 export async function openBillingPortal() {
   const session = await requireSession();
-  if (!isAdmin(session.role)) redirect("/insights?billing=forbidden");
+  if (!isAdmin(session.role)) redirect("/dashboard?billing=forbidden");
 
   const stripe = getStripe();
-  if (!stripe) redirect("/insights?billing=unconfigured");
+  if (!stripe) redirect("/dashboard?billing=unconfigured");
 
   const org = await db.organization.findUniqueOrThrow({
     where: { id: session.org.id },
     select: { stripeCustomerId: true },
   });
-  if (!org.stripeCustomerId) redirect("/insights");
+  if (!org.stripeCustomerId) redirect("/dashboard");
 
   const portal = await stripe.billingPortal.sessions.create({
     customer: org.stripeCustomerId,
-    return_url: `${appUrl()}/insights`,
+    return_url: `${appUrl()}/dashboard`,
   });
   redirect(portal.url);
 }
@@ -92,5 +94,5 @@ export async function updateInsightsSettings(formData: FormData) {
     where: { id: session.org.id },
     data: { settings: JSON.stringify(settings) },
   });
-  revalidatePath("/insights");
+  revalidatePath("/dashboard");
 }

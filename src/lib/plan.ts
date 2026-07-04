@@ -7,6 +7,8 @@ import { db } from "./db";
 
 export const TRIAL_DAYS = 14;
 export const PRO_PRICE_JPY = 490;
+// MAX Pro: 相談君 (専属COOチャット + 週1回の管理者カスタマイズ)。現在は Coming Soon で課金導線なし。
+export const MAX_PRO_PRICE_JPY = 3000;
 
 export type PlanStatus = {
   isPro: boolean;

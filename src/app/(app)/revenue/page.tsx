@@ -15,8 +15,9 @@ export default async function RevenuePage({
   const session = await requireSession();
   const params = await searchParams;
   const range = defaultRange();
-  const from = /^\d{4}-\d{2}$/.test(params.from ?? "") ? params.from! : range.from;
-  const to = /^\d{4}-\d{2}$/.test(params.to ?? "") ? params.to! : range.to;
+  let from = /^\d{4}-\d{2}$/.test(params.from ?? "") ? params.from! : range.from;
+  let to = /^\d{4}-\d{2}$/.test(params.to ?? "") ? params.to! : range.to;
+  if (from > to) [from, to] = [to, from]; // 逆転指定でも空表示にしない
 
   const report = await buildRevenueReport(session.org.id, from, to);
 

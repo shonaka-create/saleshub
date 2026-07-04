@@ -1,7 +1,12 @@
 // "2026-07" 形式の月キーユーティリティ
+// サーバー (Vercel=UTC) とユーザー (JST) で「今月」がずれないよう、月の判定は常に JST 基準で行う。
+// 契約開始日などの日付のみの値は UTC 深夜として保存されるため、+9h しても日付は変わらず安全。
+
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
 export function monthKey(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  const jst = new Date(date.getTime() + JST_OFFSET_MS);
+  return `${jst.getUTCFullYear()}-${String(jst.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
 export function currentMonthKey(): string {
