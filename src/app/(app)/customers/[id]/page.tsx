@@ -35,7 +35,10 @@ export default async function CustomerDetailPage({
     include: {
       contacts: true,
       deals: { orderBy: { updatedAt: "desc" } },
-      contracts: { orderBy: { startDate: "desc" } },
+      contracts: {
+        orderBy: { startDate: "desc" },
+        include: { deal: { select: { id: true, title: true } } },
+      },
       activities: {
         orderBy: { occurredAt: "desc" },
         include: { user: { select: { name: true } }, deal: { select: { id: true, title: true } } },
@@ -258,26 +261,31 @@ export default async function CustomerDetailPage({
             ) : (
               <ul className="space-y-2">
                 {customer.contracts.map((ct) => (
-                  <li
-                    key={ct.id}
-                    className="rounded-lg border border-slate-100 px-3 py-2"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium text-slate-800">{ct.name}</span>
-                      <Badge
-                        className={
-                          ct.status === "ACTIVE"
-                            ? "bg-emerald-100 text-emerald-800"
-                            : "bg-slate-100 text-slate-600"
-                        }
-                      >
-                        {ct.status === "ACTIVE" ? "契約中" : "終了"}
-                      </Badge>
-                    </div>
-                    <div className="mt-1 flex items-center justify-between text-xs text-slate-500">
-                      <span>{formatMoney(ct.monthlyFee, ct.currency)}/月</span>
-                      <span>{ct.startDate.toLocaleDateString("ja-JP")}〜</span>
-                    </div>
+                  <li key={ct.id}>
+                    <Link
+                      href={`/contracts/${ct.id}`}
+                      className="block rounded-lg border border-slate-100 px-3 py-2 hover:bg-slate-50"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-medium text-slate-800">{ct.name}</span>
+                        <Badge
+                          className={
+                            ct.status === "ACTIVE"
+                              ? "bg-emerald-100 text-emerald-800"
+                              : "bg-slate-100 text-slate-600"
+                          }
+                        >
+                          {ct.status === "ACTIVE" ? "契約中" : "終了"}
+                        </Badge>
+                      </div>
+                      <div className="mt-1 flex items-center justify-between text-xs text-slate-500">
+                        <span>{formatMoney(ct.monthlyFee, ct.currency)}/月</span>
+                        <span>{ct.startDate.toLocaleDateString("ja-JP")}〜</span>
+                      </div>
+                      {ct.deal && (
+                        <p className="mt-1 text-xs text-slate-400">→ 案件: {ct.deal.title}</p>
+                      )}
+                    </Link>
                   </li>
                 ))}
               </ul>

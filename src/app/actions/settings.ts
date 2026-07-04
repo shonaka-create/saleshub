@@ -100,7 +100,8 @@ export async function createService(formData: FormData) {
       sortOrder: count,
     },
   });
-  revalidatePath("/settings/services");
+  revalidatePath("/revenue/services");
+  revalidatePath("/revenue");
 }
 
 export async function updateService(formData: FormData) {
@@ -116,13 +117,15 @@ export async function updateService(formData: FormData) {
       color: String(formData.get("color") ?? "#6366f1"),
     },
   });
-  revalidatePath("/settings/services");
+  revalidatePath("/revenue/services");
+  revalidatePath("/revenue");
 }
 
 export async function toggleServiceArchived(id: string, archived: boolean) {
   const session = await requireAdmin();
   await db.service.updateMany({ where: { id, orgId: session.org.id }, data: { archived } });
-  revalidatePath("/settings/services");
+  revalidatePath("/revenue/services");
+  revalidatePath("/revenue");
 }
 
 export async function createPlan(formData: FormData) {
@@ -142,7 +145,7 @@ export async function createPlan(formData: FormData) {
       sortOrder: count,
     },
   });
-  revalidatePath("/settings/services");
+  revalidatePath("/revenue/services");
 }
 
 export async function updatePlan(formData: FormData) {
@@ -162,13 +165,13 @@ export async function updatePlan(formData: FormData) {
       active: formData.get("active") === "on",
     },
   });
-  revalidatePath("/settings/services");
+  revalidatePath("/revenue/services");
 }
 
 export async function deletePlan(id: string) {
   const session = await requireAdmin();
   await db.plan.deleteMany({ where: { id, service: { orgId: session.org.id } } });
-  revalidatePath("/settings/services");
+  revalidatePath("/revenue/services");
 }
 
 // ===== 経費カテゴリ =====
@@ -181,7 +184,7 @@ export async function createExpenseCategory(formData: FormData) {
   await db.expenseCategory.create({
     data: { orgId: session.org.id, name, sortOrder: count },
   });
-  revalidatePath("/settings/expense-categories");
+  revalidatePath("/revenue/expense-categories");
   revalidatePath("/revenue");
 }
 
@@ -191,14 +194,14 @@ export async function renameExpenseCategory(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   if (!id || !name) return;
   await db.expenseCategory.updateMany({ where: { id, orgId: session.org.id }, data: { name } });
-  revalidatePath("/settings/expense-categories");
+  revalidatePath("/revenue/expense-categories");
   revalidatePath("/revenue");
 }
 
 export async function deleteExpenseCategory(id: string) {
   const session = await requireAdmin();
   await db.expenseCategory.deleteMany({ where: { id, orgId: session.org.id } });
-  revalidatePath("/settings/expense-categories");
+  revalidatePath("/revenue/expense-categories");
   revalidatePath("/revenue");
 }
 

@@ -4,16 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const tabs = [
-  { href: "/settings", label: "組織・通貨" },
-  { href: "/settings/members", label: "メンバー・招待" },
-  { href: "/settings/custom-fields", label: "カスタム項目" },
-  { href: "/settings/cancel", label: "解約" },
+  { href: "/team", label: "概要" },
+  { href: "/team/invoices", label: "請求書管理" },
+  { href: "/team/contract-docs", label: "契約書管理" },
+  { href: "/team/outsourcing-costs", label: "委託費管理" },
 ];
 
-export function SettingsTabs() {
+export function TeamTabs() {
   const pathname = usePathname();
   return (
-    <div className="flex flex-wrap gap-1 border-b border-slate-200">
+    <div className="mb-6 flex flex-wrap gap-1 border-b border-slate-200">
       {tabs.map((tab) => {
         const active = pathname === tab.href;
         return (

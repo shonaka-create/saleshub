@@ -52,7 +52,7 @@ export async function createContract(
     if (deal) dealId = deal.id;
   }
 
-  await db.contract.create({
+  const created = await db.contract.create({
     data: {
       orgId,
       customerId,
@@ -70,7 +70,7 @@ export async function createContract(
 
   revalidatePath("/contracts");
   revalidatePath("/revenue");
-  redirect("/contracts");
+  redirect(`/contracts/${created.id}`);
 }
 
 export async function updateContract(
@@ -130,8 +130,9 @@ export async function updateContract(
   });
 
   revalidatePath("/contracts");
+  revalidatePath(`/contracts/${id}`);
   revalidatePath("/revenue");
-  redirect("/contracts");
+  redirect(`/contracts/${id}`);
 }
 
 export async function deleteContract(id: string) {

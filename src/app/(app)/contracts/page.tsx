@@ -24,7 +24,7 @@ export default async function ContractsPage({
   const [contracts, services, activeContracts] = await Promise.all([
     db.contract.findMany({
       where,
-      include: { customer: true, service: true, plan: true },
+      include: { customer: true, service: true, plan: true, deal: { select: { id: true, title: true } } },
       orderBy: { startDate: "desc" },
     }),
     db.service.findMany({ where: { orgId, archived: false }, orderBy: { sortOrder: "asc" } }),
@@ -101,6 +101,7 @@ export default async function ContractsPage({
               <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
                 <th className="px-4 py-3 font-medium">契約名</th>
                 <th className="px-4 py-3 font-medium">顧客</th>
+                <th className="px-4 py-3 font-medium">元案件</th>
                 <th className="px-4 py-3 font-medium">サービス</th>
                 <th className="px-4 py-3 font-medium">プラン</th>
                 <th className="px-4 py-3 text-right font-medium">月額</th>
@@ -115,13 +116,22 @@ export default async function ContractsPage({
                 <tr key={c.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
                   <td className="px-4 py-3">
                     <Link
-                      href={`/contracts/${c.id}/edit`}
+                      href={`/contracts/${c.id}`}
                       className="font-medium text-akane-700 hover:underline"
                     >
                       {c.name}
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-slate-600">{c.customer.name}</td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {c.deal ? (
+                      <Link href={`/deals/${c.deal.id}`} className="hover:underline">
+                        {c.deal.title}
+                      </Link>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <span className="inline-flex items-center gap-1.5 text-slate-600">
                       <span

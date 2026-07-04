@@ -50,7 +50,11 @@ export default async function RevenuePage({
       <p className="mt-4 text-xs text-slate-400">
         ・サービス行のセルは契約データから自動計算されます。クリックして数値を入力すると上書きされ、<span className="font-medium text-amber-600">●</span> マークが付きます。空にして保存すると自動計算値に戻ります。
         <br />
-        ・「行を追加」でサービス外の売上 (スポット案件など) を自由に追加できます。経費行は設定画面のカテゴリマスタから変更できます。
+        ・「行を追加」でサービス外の売上 (スポット案件など) を自由に追加できます。サービスを増やしたい場合は
+        <Link href="/revenue/services" className="text-akane-600 hover:underline">「サービス・プラン」</Link>
+        タブから、経費行は
+        <Link href="/revenue/expense-categories" className="text-akane-600 hover:underline">「経費カテゴリ」</Link>
+        タブから追加・変更できます。
       </p>
     </div>
   );

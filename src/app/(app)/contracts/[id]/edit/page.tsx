@@ -5,7 +5,7 @@ import { PageHeader, Card } from "@/components/ui";
 import { ActivityPanel } from "@/components/activity-panel";
 import { updateContract } from "@/app/actions/contracts";
 import { ContractForm, type ContractFormValues, type PlanOpt } from "../../contract-form";
-import { DeleteContractButton } from "./delete-contract";
+import { DeleteContractButton } from "../delete-contract";
 
 function toDateInput(d: Date | null): string {
   if (!d) return "";
@@ -76,7 +76,7 @@ export default async function EditContractPage({ params }: { params: Promise<{ i
               services={services}
               plans={plans as PlanOpt[]}
               submitLabel="更新する"
-              cancelHref="/contracts"
+              cancelHref={`/contracts/${contract.id}`}
               showStatus
             />
           </Card>

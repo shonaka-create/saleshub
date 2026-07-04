@@ -280,7 +280,11 @@ export default async function BillingPage({
             </p>
             <p className="text-xs text-slate-400">MAX プランのすべて + 以下</p>
             <ul className="mt-5 space-y-2 text-sm text-slate-700">
-              {["チームでの壁打ちCOO共有", "チーム横断の売上・コスト分析"].map((f) => (
+              {[
+                "請求書管理・契約書管理・委託費管理 (契約後の書類・経費ワークフロー)",
+                "チームでの壁打ちCOO共有",
+                "チーム横断の売上・コスト分析",
+              ].map((f) => (
                 <li key={f} className="flex items-start gap-2">
                   <span className="text-indigo-500">◆</span>
                   {f}

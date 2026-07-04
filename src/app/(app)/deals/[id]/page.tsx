@@ -37,7 +37,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
       customer: true,
       service: true,
       plan: true,
-      contracts: { select: { id: true } },
+      contracts: { select: { id: true, name: true, status: true } },
     },
   });
   if (!deal) notFound();
@@ -198,7 +198,31 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
           </Card>
         </div>
 
-        <div>
+        <div className="space-y-6">
+          {deal.contracts.length > 0 && (
+            <Card className="p-5">
+              <h2 className="mb-3 text-sm font-semibold text-slate-800">契約</h2>
+              <ul className="space-y-2">
+                {deal.contracts.map((c) => (
+                  <li key={c.id}>
+                    <Link
+                      href={`/contracts/${c.id}`}
+                      className="flex items-center justify-between gap-2 rounded-lg border border-slate-100 px-3 py-2 hover:bg-slate-50"
+                    >
+                      <span className="text-sm font-medium text-slate-800">{c.name}</span>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                          c.status === "ACTIVE" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
+                        }`}
+                      >
+                        {c.status === "ACTIVE" ? "稼働中" : "終了"}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
           <Card className="p-5">
             <h2 className="mb-4 text-sm font-semibold text-slate-800">
               活動履歴

@@ -12,7 +12,10 @@ export const TRIAL_DAYS = 14;
 export const PRO_PRICE_JPY = 490; // 1メンバーあたりの月額 (席課金)
 // MAX Pro: 壁打ちCOO (専属COOチャット + 週1回の管理者カスタマイズ)。現在は Coming Soon で課金導線なし。
 export const MAX_PRO_PRICE_JPY = 3000;
-// for Team: チームでの壁打ちCOO / 共同利用。壁打ちCOOと同額帯で Coming Soon。
+// TEAM プラン (¥3,000/mo): 契約後の書類・経費ワークフロー一式 (請求書管理・契約書管理・委託費管理) +
+// 将来のチーム版壁打ちCOO (共同利用)。/team 配下にまとめて配置。現状は MAX と同じく Coming Soon で課金導線なし。
+// 課金を実装する際は Organization.plan/stripeSubscriptionId (Pro) と同型の
+// teamPlanStatus/stripeTeamSubscriptionId を追加する想定。
 export const TEAM_PRICE_JPY = 3000;
 
 export type PlanStatus = {
