@@ -5,14 +5,16 @@ import { usePathname, useRouter } from "next/navigation";
 import { switchOrg } from "../(auth)/actions";
 
 const links = [
-  // 旧「ダッシュボード」+「経営分析」は /dashboard (経営数値分析) に統合済み
-  { href: "/dashboard", label: "経営数値分析", icon: "📈" },
+  // 無料プラン (基本利用に含む) — バッジなし
   { href: "/customers", label: "顧客管理", icon: "👥" },
   { href: "/deals", label: "案件管理", icon: "📋" },
   { href: "/contracts", label: "契約管理", icon: "📝" },
   { href: "/revenue", label: "売上管理", icon: "💰" },
+  // Pro プラン — 旧「ダッシュボード」+「経営分析」は /dashboard (経営数値分析) に統合済み
+  { href: "/dashboard", label: "経営数値分析", icon: "📈", pro: true },
+  { href: "/templates", label: "テンプレート", icon: "📁", pro: true },
+  // MAX プラン
   { href: "/advisor", label: "相談君", icon: "🤝", maxPro: true },
-  { href: "/templates", label: "テンプレート", icon: "📁" },
   { href: "/settings", label: "設定", icon: "⚙️" },
 ] as { href: string; label: string; icon: string; pro?: boolean; maxPro?: boolean }[];
 
