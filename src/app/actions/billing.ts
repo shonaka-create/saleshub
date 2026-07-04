@@ -28,10 +28,11 @@ export async function startProTrialCheckout(formData: FormData) {
     select: { id: true, plan: true, trialEndsAt: true, stripeCustomerId: true },
   });
   if (org.plan === "PRO" || org.trialEndsAt != null) redirect("/dashboard");
+  const seats = Math.max(1, await db.membership.count({ where: { orgId: org.id } }));
 
   const checkout = await stripe.checkout.sessions.create({
     mode: "subscription",
-    line_items: [{ price, quantity: 1 }],
+    line_items: [{ price, quantity: seats }],
     payment_method_collection: "always", // トライアルでもカード情報を必ず収集する
     client_reference_id: org.id,
     ...(org.stripeCustomerId
@@ -75,10 +76,11 @@ export async function startProCheckout() {
     where: { id: session.org.id },
     select: { id: true, stripeCustomerId: true },
   });
+  const seats = Math.max(1, await db.membership.count({ where: { orgId: org.id } }));
 
   const checkout = await stripe.checkout.sessions.create({
     mode: "subscription",
-    line_items: [{ price, quantity: 1 }],
+    line_items: [{ price, quantity: seats }],
     client_reference_id: org.id,
     ...(org.stripeCustomerId
       ? { customer: org.stripeCustomerId }

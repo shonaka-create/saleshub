@@ -5,18 +5,22 @@ import { usePathname, useRouter } from "next/navigation";
 import { switchOrg } from "../(auth)/actions";
 
 const links = [
-  // 無料プラン (基本利用に含む) — バッジなし
+  // 基本プラン (基本利用に含む) — バッジなし
   { href: "/customers", label: "顧客管理", icon: "👥" },
   { href: "/deals", label: "案件管理", icon: "📋" },
   { href: "/contracts", label: "契約管理", icon: "📝" },
   { href: "/revenue", label: "売上管理", icon: "💰" },
+  // 近日公開の書類・費用管理 (Coming Soon)
+  { href: "/invoices", label: "請求書管理", icon: "🧾", soon: true },
+  { href: "/contract-docs", label: "契約書管理", icon: "📄", soon: true },
+  { href: "/outsourcing-costs", label: "委託費管理", icon: "🤝", soon: true },
   // Pro プラン — 旧「ダッシュボード」+「経営分析」は /dashboard (経営数値分析) に統合済み
   { href: "/dashboard", label: "経営数値分析", icon: "📈", pro: true },
   { href: "/templates", label: "テンプレート", icon: "📁", pro: true },
   // MAX プラン
-  { href: "/advisor", label: "相談君", icon: "🤝", maxPro: true },
+  { href: "/advisor", label: "壁打ちCOO", icon: "🧑‍💼", maxPro: true },
   { href: "/settings", label: "設定", icon: "⚙️" },
-] as { href: string; label: string; icon: string; pro?: boolean; maxPro?: boolean }[];
+] as { href: string; label: string; icon: string; pro?: boolean; maxPro?: boolean; soon?: boolean }[];
 
 export function NavLinks() {
   const pathname = usePathname();
@@ -44,6 +48,11 @@ export function NavLinks() {
               {link.maxPro && (
                 <span className="ml-auto rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
                   MAX
+                </span>
+              )}
+              {link.soon && (
+                <span className="ml-auto rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-400">
+                  近日
                 </span>
               )}
             </Link>

@@ -8,9 +8,11 @@ import { db } from "./db";
 // - trialEndsAt != null はトライアル消費済みの印としても使う (1組織1回のみ)
 
 export const TRIAL_DAYS = 14;
-export const PRO_PRICE_JPY = 490;
-// MAX Pro: 相談君 (専属COOチャット + 週1回の管理者カスタマイズ)。現在は Coming Soon で課金導線なし。
+export const PRO_PRICE_JPY = 490; // 1メンバーあたりの月額 (席課金)
+// MAX Pro: 壁打ちCOO (専属COOチャット + 週1回の管理者カスタマイズ)。現在は Coming Soon で課金導線なし。
 export const MAX_PRO_PRICE_JPY = 3000;
+// for Team: チームでの壁打ちCOO / 共同利用。壁打ちCOOと同額帯で Coming Soon。
+export const TEAM_PRICE_JPY = 3000;
 
 export type PlanStatus = {
   isPro: boolean;

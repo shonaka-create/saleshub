@@ -14,7 +14,7 @@ import {
   updateInsightsSettings,
 } from "@/app/actions/billing";
 import { RevenueStackedChart, PipelineChart } from "./charts";
-import { PnlChart, MrrChurnChart, ContractsChart, OutsourcingChart } from "../insights/charts";
+import { PnlChart, ContractsChart, OutsourcingChart } from "../insights/charts";
 
 export const metadata = { title: "経営数値分析" };
 
@@ -128,66 +128,11 @@ export default async function DashboardPage({
     };
   });
 
-  // ===== Pro 指標タイル =====
-  const ratioHealth =
-    report.ltvCacRatio == null
-      ? null
-      : report.ltvCacRatio >= 3
-        ? { label: "健全 (3以上)", cls: "text-emerald-700" }
-        : report.ltvCacRatio >= 1
-          ? { label: "要改善 (3未満)", cls: "text-amber-600" }
-          : { label: "赤字構造 (1未満)", cls: "text-rose-600" };
-
-  const proTiles: { label: string; value: string; sub: string; subCls?: string }[] = [
-    {
-      label: "MRR成長率 (前月比)",
-      value:
-        report.mrrGrowthPct == null
-          ? "—"
-          : `${report.mrrGrowthPct >= 0 ? "+" : ""}${report.mrrGrowthPct.toFixed(1)}%`,
-      sub: `ARR (年間換算) ${fmt(report.arr)}`,
-      subCls: report.mrrGrowthPct != null && report.mrrGrowthPct < 0 ? "text-rose-600" : "text-emerald-700",
-    },
-    {
-      label: "解約率 (月次)",
-      value: `${report.avgChurnRatePct.toFixed(1)}%`,
-      sub: "直近3ヶ月平均",
-      subCls: report.avgChurnRatePct > 5 ? "text-rose-600" : undefined,
-    },
-    { label: "ARPU (契約単価)", value: fmt(report.arpu), sub: "稼働契約1件あたり月次収益" },
-    {
-      label: "粗利率",
-      value: `${report.grossMarginPct.toFixed(0)}%`,
-      sub: "直近3ヶ月の (売上−経費) ÷ 売上",
-    },
-    {
-      label: "LTV (顧客生涯価値)",
-      value: report.ltv == null ? "—" : fmt(report.ltv),
-      sub:
-        report.avgLifetimeMonths == null
-          ? "解約実績がまだありません"
-          : `平均継続 ${report.avgLifetimeMonths.toFixed(0)}ヶ月 × ARPU`,
-    },
-    {
-      label: "CAC (顧客獲得コスト)",
-      value: report.cac == null ? "—" : fmt(report.cac),
-      sub:
-        report.cac == null
-          ? "広告・マーケ経費の入力が必要です"
-          : `直近6ヶ月: ${report.marketingCategoryNames.join("・") || "広告系カテゴリ"} ÷ 新規契約数`,
-    },
-    {
-      label: "ユニットエコノミクス (LTV/CAC)",
-      value: report.ltvCacRatio == null ? "—" : report.ltvCacRatio.toFixed(1),
-      sub: ratioHealth?.label ?? "LTV と CAC の両方が必要です",
-      subCls: ratioHealth?.cls,
-    },
-    {
-      label: "CAC回収期間",
-      value: report.cacPaybackMonths == null ? "—" : `${report.cacPaybackMonths.toFixed(1)}ヶ月`,
-      sub: "CAC ÷ ARPU",
-    },
-  ];
+  // ===== SaaS メトリクスの KPI タイル =====
+  // MRR成長率・解約率・ARPU・LTV・CAC・ユニットエコノミクス・CAC回収期間 などは、
+  // 現状の売上管理の入力からは正確に読み取りにくい (契約ライフサイクルやマーケ費の
+  // 按分が前提) ため、ダッシュボードでは非表示にしている。データ整備が進んだら復活可。
+  // MRRと解約率の推移チャートも同様の理由で非表示。
 
   return (
     <div>
@@ -354,22 +299,9 @@ export default async function DashboardPage({
             </div>
           )}
 
-          {/* Pro 指標タイル */}
-          <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {proTiles.map((t) => (
-              <Card key={t.label} className="p-5">
-                <p className="text-xs font-medium text-slate-500">{t.label}</p>
-                <p className="mt-1.5 text-2xl font-bold tracking-tight text-slate-900">{t.value}</p>
-                <p className={`mt-1 text-xs ${t.subCls ?? "text-slate-400"}`}>{t.sub}</p>
-              </Card>
-            ))}
-          </div>
-
-          <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <Card className="p-5">
-              <h2 className="mb-4 text-sm font-semibold text-slate-800">MRR と解約率</h2>
-              <MrrChurnChart data={chartData} baseCurrency={base} />
-            </Card>
+          {/* SaaS メトリクスの KPI タイル・MRR/解約率チャートは、売上管理の入力からは
+              正確に読み取りにくいため非表示 (contracts の増減=件数ベースは残す) */}
+          <div className="mb-6">
             <Card className="p-5">
               <h2 className="mb-4 text-sm font-semibold text-slate-800">契約の増減 (新規・解約・稼働)</h2>
               <ContractsChart data={chartData} />

@@ -30,7 +30,7 @@ export default async function TemplatesPage() {
             テンプレートは Pro プランの機能です
           </h3>
           <p className="mt-2 text-sm text-slate-500">
-            Pro プラン (月額 ¥{PRO_PRICE_JPY}) または14日間無料トライアルでご利用いただけます。
+            Pro プラン (月額 ¥{PRO_PRICE_JPY}/人) または14日間無料トライアルでご利用いただけます。
           </p>
           <Link
             href="/dashboard"

@@ -1,25 +1,25 @@
 import { requireSession } from "@/lib/auth";
-import { MAX_PRO_PRICE_JPY } from "@/lib/plan";
+import { MAX_PRO_PRICE_JPY, TEAM_PRICE_JPY } from "@/lib/plan";
 import { PageHeader, Card, Badge } from "@/components/ui";
 
-export const metadata = { title: "相談君" };
+export const metadata = { title: "壁打ちCOO" };
 
 // MAX Pro プラン (Coming Soon)。課金導線はまだなく、プランの予告ページのみ。
 const MAX_FEATURES = [
   {
     icon: "💬",
-    title: "利益あげる君とのチャット壁打ち",
+    title: "壁打ちCOOとのチャット壁打ち",
     body: "事業の方向性やクライアントとの期待値コントロールを、いつでもチャットで相談。あなたの売上・コスト・顧客データを踏まえた具体的なアドバイスが返ってきます。",
   },
   {
     icon: "🧑‍💼",
     title: "あなた専用のCOO(右腕)",
-    body: "相談君はあなたの事業を継続的に理解する専属の右腕。単発の回答ではなく、事業の文脈を積み上げた上で利益を上げるための提案をします。",
+    body: "壁打ちCOOはあなたの事業を継続的に理解する専属の右腕。単発の回答ではなく、事業の文脈を積み上げた上で利益を上げるための提案をします。",
   },
   {
     icon: "🛠️",
     title: "週1回のプロによるカスタマイズ",
-    body: "週に1回、裏側で管理者(プロ)があなたの事業に合わせて相談君をチューニング。使えば使うほど、あなたの事業に最適化されていきます。",
+    body: "週に1回、裏側で管理者(プロ)があなたの事業に合わせて壁打ちCOOをチューニング。使えば使うほど、あなたの事業に最適化されていきます。",
   },
 ];
 
@@ -37,8 +37,15 @@ const VALUE_PILLARS = [
   {
     label: "利益",
     icon: "🚀",
-    body: "相談君との壁打ちで事業と期待値をコントロールし、利益を上げる",
+    body: "壁打ちCOOとの壁打ちで事業と期待値をコントロールし、利益を上げる",
   },
+];
+
+// for Team (Coming Soon): チームでの共同利用機能
+const TEAM_FEATURES = [
+  "チーム全員での壁打ちCOO共有 (会話履歴・文脈をチームで蓄積)",
+  "メンバーごとの役割・目標に合わせたアドバイス",
+  "チームの売上・コスト・案件をまたいだ横断分析",
 ];
 
 export default async function AdvisorPage() {
@@ -47,7 +54,7 @@ export default async function AdvisorPage() {
   return (
     <>
       <PageHeader
-        title="相談君"
+        title="壁打ちCOO"
         description="あなた専用のCOO(右腕)と、利益を上げるための壁打ちを"
       />
 
@@ -61,7 +68,7 @@ export default async function AdvisorPage() {
         </h2>
         <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-500">
           Saleshub は活動を管理し、無駄なコストを削減し、売上と利益を上げるためのシステムです。
-          その最後のピースが「相談君」— あなた専用のCOOとして、利益を上げるための相談相手になります。
+          その最後のピースが「壁打ちCOO」— あなた専用のCOOとして、利益を上げるための相談相手になります。
         </p>
 
         <div className="mx-auto mt-6 grid max-w-3xl gap-3 sm:grid-cols-3">
@@ -94,14 +101,14 @@ export default async function AdvisorPage() {
       {/* 料金 */}
       <Card className="mx-auto mt-6 max-w-xl p-8 text-center">
         <span className="inline-flex items-center rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 px-3 py-1 text-xs font-bold text-white">
-          MAX Pro プラン
+          MAX プラン
         </span>
         <p className="mt-4 text-3xl font-bold text-slate-900">
-          ¥{MAX_PRO_PRICE_JPY.toLocaleString()}
-          <span className="text-sm font-medium text-slate-500"> / 月</span>
+          +¥{MAX_PRO_PRICE_JPY.toLocaleString()}
+          <span className="text-sm font-medium text-slate-500"> / 人・月</span>
         </p>
         <p className="mt-2 text-sm text-slate-500">
-          相談君 (専属COOチャット) + 週1回のプロによるカスタマイズ
+          壁打ちCOO (専属COOチャット) + 週1回のプロによるカスタマイズ
         </p>
         <button
           type="button"
@@ -109,6 +116,38 @@ export default async function AdvisorPage() {
           className="mt-6 inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg bg-slate-200 px-3.5 py-2 text-sm font-semibold text-slate-400"
         >
           近日公開 — しばらくお待ちください
+        </button>
+      </Card>
+
+      {/* for Team (Coming Soon) */}
+      <Card className="mx-auto mt-6 max-w-2xl overflow-hidden p-8">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="inline-flex items-center rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 px-3 py-1 text-xs font-bold text-white">
+            壁打ちCOO for Team
+          </span>
+          <Badge className="bg-slate-100 text-slate-600">Coming Soon</Badge>
+        </div>
+        <p className="mt-4 text-2xl font-bold text-slate-900">
+          +¥{TEAM_PRICE_JPY.toLocaleString()}
+          <span className="text-sm font-medium text-slate-500"> / 人・月</span>
+        </p>
+        <p className="mt-1 text-sm text-slate-500">
+          壁打ちCOO の内容に加え、チームでの共同利用に対応します。
+        </p>
+        <ul className="mt-5 space-y-2 text-sm text-slate-700">
+          {TEAM_FEATURES.map((f) => (
+            <li key={f} className="flex items-start gap-2">
+              <span className="text-violet-500">◆</span>
+              {f}
+            </li>
+          ))}
+        </ul>
+        <button
+          type="button"
+          disabled
+          className="mt-6 inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg bg-slate-200 px-3.5 py-2 text-sm font-semibold text-slate-400"
+        >
+          近日公開
         </button>
       </Card>
     </>

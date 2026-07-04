@@ -1,15 +1,16 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { requireSession } from "@/lib/auth";
+import { requireSession, isAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ROLE_LABELS, type Role } from "@/lib/constants";
-import { baseStatus, BASE_PRICE_JPY } from "@/lib/pricing";
+import { baseStatus, BASE_PRICE_JPY, seatTotal } from "@/lib/pricing";
 import { logout } from "../(auth)/actions";
 import { NavLinks, OrgSwitcher } from "./nav";
+import { PlanExpiredModal, FreePeriodEndingModal } from "./plan-gate-modal";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await requireSession();
-  const [memberships, org, me] = await Promise.all([
+  const admin = isAdmin(session.role);
+  const [memberships, org, me, seats] = await Promise.all([
     db.membership.findMany({
       where: { userId: session.user.id },
       include: { org: true },
@@ -22,13 +23,22 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       where: { id: session.user.id },
       select: { isSystemAdmin: true },
     }),
+    db.membership.count({ where: { orgId: session.org.id } }),
   ]);
 
-  // 基本プラン (システム利用料): 無料期間が終了して未課金の組織は課金案内ページへ
   const base = baseStatus(org);
-  if (!base.hasAccess) redirect("/billing");
+  const memberSeats = Math.max(1, seats);
+  const monthlyLabel = `月額 ¥${BASE_PRICE_JPY}/人 × ${memberSeats}名 = ¥${seatTotal(BASE_PRICE_JPY, memberSeats).toLocaleString()}`;
+
+  // 基本プラン (システム利用料): 無料期間が終了して未課金の組織はブロッキングポップアップを表示し、
+  // アプリ本体はレンダリングしない (課金しないと使えないことをポップアップで明示する)。
+  if (!base.hasAccess) {
+    return <PlanExpiredModal orgName={session.org.name} monthlyLabel={monthlyLabel} admin={admin} />;
+  }
 
   const fmtDate = (d: Date) => `${d.getMonth() + 1}月${d.getDate()}日`;
+  // 無料期間の残りが7日以内なら課金を促すポップアップ (閉じられる)
+  const showEndingModal = !base.subscribed && base.inFreePeriod && base.freeDaysLeft <= 7;
 
   return (
     <div className="flex min-h-screen">
@@ -80,8 +90,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <div className="mb-6 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-akane-200 bg-akane-50 px-4 py-2.5">
               <p className="text-sm text-akane-800">
                 {base.earlyBird ? "🎉 早期登録特典 (3ヶ月無料) " : "初月無料 "}
-                — {fmtDate(base.freeUntil)}まで無料 (残り {base.freeDaysLeft}日)。以降は月額 ¥
-                {BASE_PRICE_JPY} です。
+                — {fmtDate(base.freeUntil)}まで無料 (残り {base.freeDaysLeft}日)。以降は{monthlyLabel} です。
               </p>
               <Link
                 href="/billing"
@@ -94,6 +103,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           {children}
         </div>
       </main>
+
+      {/* 無料期間終了間近のポップアップ */}
+      {showEndingModal && (
+        <FreePeriodEndingModal
+          daysLeft={base.freeDaysLeft}
+          monthlyLabel={monthlyLabel}
+          admin={admin}
+        />
+      )}
     </div>
   );
 }

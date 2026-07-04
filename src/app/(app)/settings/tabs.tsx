@@ -9,6 +9,7 @@ const tabs = [
   { href: "/settings/services", label: "サービス・プラン" },
   { href: "/settings/expense-categories", label: "経費カテゴリ" },
   { href: "/settings/custom-fields", label: "カスタム項目" },
+  { href: "/settings/cancel", label: "解約" },
 ];
 
 export function SettingsTabs() {

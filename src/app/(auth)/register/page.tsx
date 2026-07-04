@@ -44,7 +44,7 @@ export default function RegisterPage() {
           <li className="flex items-start gap-2">
             <span className="text-emerald-600">✓</span>
             <span>
-              無料期間終了後は <strong>月額 {BASE_PRICE_JPY}円</strong> (税込) — いつでも解約できます
+              無料期間終了後は <strong>月額 {BASE_PRICE_JPY}円 / 人</strong> (税込) — いつでも解約できます
             </span>
           </li>
           <li className="flex items-start gap-2">
@@ -53,7 +53,9 @@ export default function RegisterPage() {
           </li>
           <li className="flex items-start gap-2">
             <span className="text-slate-400">＋</span>
-            <span className="text-slate-500">経営分析 (Pro) は別途 月額490円・14日間無料トライアル</span>
+            <span className="text-slate-500">
+              メンバーを追加した分だけ加算（1人あたりの料金）。経営分析 (Pro) は別途 月額490円/人・14日間無料トライアル
+            </span>
           </li>
         </ul>
       </div>
