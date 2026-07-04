@@ -97,3 +97,15 @@ export async function requireSession() {
 export function isAdmin(role: string) {
   return role === "OWNER" || role === "ADMIN";
 }
+
+// サービス運営者 (User.isSystemAdmin) は課金状態に関わらず全機能を解放する。
+// 各機能ゲート (基本プランのアクセス制限・Pro 制限) から呼び、true なら制限をバイパスする。
+export async function isCurrentUserSystemAdmin(): Promise<boolean> {
+  const session = await getSession();
+  if (!session) return false;
+  const u = await dbAdmin.user.findUnique({
+    where: { id: session.user.id },
+    select: { isSystemAdmin: true },
+  });
+  return u?.isSystemAdmin ?? false;
+}

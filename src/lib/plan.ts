@@ -1,5 +1,6 @@
 import "server-only";
 import { db } from "./db";
+import { isCurrentUserSystemAdmin } from "./auth";
 
 // Pro プラン (経営数値分析・テンプレート) のアクセス制御。
 // - PRO: Stripe サブスクリプション契約中 (trialing 含む — webhook が plan/trialEndsAt を同期)
@@ -51,6 +52,8 @@ export function planStatus(org: { plan: string; trialEndsAt: Date | null }): Pla
 // Pro 機能のサーバー側ガード (テンプレートのアップロード/ダウンロード等から呼ぶ)。
 // UI のゲートだけでなく、Server Action / Route Handler 直叩きでも Pro 以外を拒否する。
 export async function requireProAccess(orgId: string): Promise<void> {
+  // サービス運営者 (isSystemAdmin) は課金状態に関わらず全機能を解放する
+  if (await isCurrentUserSystemAdmin()) return;
   const org = await db.organization.findUniqueOrThrow({
     where: { id: orgId },
     select: { plan: true, trialEndsAt: true },

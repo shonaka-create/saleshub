@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireSession, isAdmin } from "@/lib/auth";
+import { requireSession, isAdmin, isCurrentUserSystemAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { planStatus, TRIAL_DAYS, PRO_PRICE_JPY } from "@/lib/plan";
 import { buildInsightsReport } from "@/lib/insights";
@@ -37,7 +37,7 @@ export default async function DashboardPage({
   const admin = isAdmin(session.role);
   const now = currentMonthKey();
 
-  const [org, openDeals, activeContracts] = await Promise.all([
+  const [org, openDeals, activeContracts, sysAdmin] = await Promise.all([
     db.organization.findUniqueOrThrow({
       where: { id: orgId },
       select: { plan: true, trialEndsAt: true, settings: true, stripeCustomerId: true },
@@ -46,10 +46,13 @@ export default async function DashboardPage({
       where: { orgId, stage: { in: ["LEAD", "NEGOTIATION", "PROPOSAL"] } },
     }),
     db.contract.count({ where: { orgId, status: "ACTIVE" } }),
+    isCurrentUserSystemAdmin(),
   ]);
 
-  // Pro (経営分析) のアクセス状態。トライアルは自動開始せず、ボタンから明示的に始める
+  // Pro (経営分析) のアクセス状態。トライアルは自動開始せず、ボタンから明示的に始める。
+  // 運営者 (isSystemAdmin) は課金状態に関わらず Pro 機能を解放する。
   const status = planStatus(org);
+  const proAccess = status.hasAccess || sysAdmin;
 
   // 売上レポート + 経営指標 (基本指標は全プランで表示、Pro指標はアクセス時のみ描画)
   const report = await buildInsightsReport(orgId, org.settings);
@@ -203,7 +206,7 @@ export default async function DashboardPage({
         </span>
       </div>
 
-      {status.hasAccess ? (
+      {proAccess ? (
         <>
           {/* Stripe トライアル中: 終了日と解約導線を明示 (解約すれば課金なし) */}
           {status.stripeTrialing && (

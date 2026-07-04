@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireSession } from "@/lib/auth";
+import { requireSession, isCurrentUserSystemAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { planStatus, PRO_PRICE_JPY } from "@/lib/plan";
 import { PageHeader, Card } from "@/components/ui";
@@ -10,14 +10,17 @@ export const metadata = { title: "テンプレート" };
 export default async function TemplatesPage() {
   const session = await requireSession();
 
-  // テンプレートは Pro プランの機能 (トライアル含む)
-  const org = await db.organization.findUniqueOrThrow({
-    where: { id: session.org.id },
-    select: { plan: true, trialEndsAt: true },
-  });
+  // テンプレートは Pro プランの機能 (トライアル含む)。運営者は課金状態に関わらず解放。
+  const [org, sysAdmin] = await Promise.all([
+    db.organization.findUniqueOrThrow({
+      where: { id: session.org.id },
+      select: { plan: true, trialEndsAt: true },
+    }),
+    isCurrentUserSystemAdmin(),
+  ]);
   const status = planStatus(org);
 
-  if (!status.hasAccess) {
+  if (!status.hasAccess && !sysAdmin) {
     return (
       <div>
         <PageHeader

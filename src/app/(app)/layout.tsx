@@ -32,13 +32,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   // 基本プラン (システム利用料): 無料期間が終了して未課金の組織はブロッキングポップアップを表示し、
   // アプリ本体はレンダリングしない (課金しないと使えないことをポップアップで明示する)。
-  if (!base.hasAccess) {
+  // ただしサービス運営者 (isSystemAdmin) は課金状態に関わらず全機能を解放する。
+  if (!base.hasAccess && !me?.isSystemAdmin) {
     return <PlanExpiredModal orgName={session.org.name} monthlyLabel={monthlyLabel} admin={admin} />;
   }
 
   const fmtDate = (d: Date) => `${d.getMonth() + 1}月${d.getDate()}日`;
-  // 無料期間の残りが7日以内なら課金を促すポップアップ (閉じられる)
-  const showEndingModal = !base.subscribed && base.inFreePeriod && base.freeDaysLeft <= 7;
+  // 無料期間の残りが7日以内なら課金を促すポップアップ (閉じられる)。運営者には出さない。
+  const showEndingModal =
+    !me?.isSystemAdmin && !base.subscribed && base.inFreePeriod && base.freeDaysLeft <= 7;
 
   return (
     <div className="flex min-h-screen">
