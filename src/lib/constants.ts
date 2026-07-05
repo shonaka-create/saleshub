@@ -188,6 +188,8 @@ export const INVOICE_FIELD_LABELS: Record<InvoiceDirection, { delivered: string;
   RECEIVED: { delivered: "受領", settled: "支払" },
 };
 
+// プリセットのカテゴリ (キーで保存)。これに加えて、ユーザーは自由入力カテゴリを作成でき、
+// その場合はラベル文字列そのものを category として保存する (キーではない)。
 export const TEMPLATE_CATEGORIES = ["PROPOSAL", "QUOTE", "CONTRACT", "INVOICE", "REPORT", "OTHER"] as const;
 export const TEMPLATE_CATEGORY_LABELS: Record<string, string> = {
   PROPOSAL: "提案書",
@@ -197,3 +199,22 @@ export const TEMPLATE_CATEGORY_LABELS: Record<string, string> = {
   REPORT: "議事録・報告書",
   OTHER: "その他",
 };
+export const TEMPLATE_CATEGORY_MAX_LEN = 20; // 自由入力カテゴリ名の最大文字数
+
+// プリセットならラベルへ、自由入力カテゴリならその文字列をそのまま表示に使う。
+export function templateCategoryLabel(category: string): string {
+  return TEMPLATE_CATEGORY_LABELS[category] ?? category;
+}
+
+// 入力カテゴリを保存用の値に正規化する。
+// - 空 → OTHER / プリセットキー → そのまま / プリセットのラベルと一致 → 対応キー / それ以外 → 自由入力 (trim + 上限)
+export function normalizeTemplateCategory(raw: string): string {
+  const v = (raw ?? "").trim();
+  if (v === "") return "OTHER";
+  if ((TEMPLATE_CATEGORIES as readonly string[]).includes(v)) return v;
+  const key = (Object.keys(TEMPLATE_CATEGORY_LABELS) as string[]).find(
+    (k) => TEMPLATE_CATEGORY_LABELS[k] === v
+  );
+  if (key) return key;
+  return v.slice(0, TEMPLATE_CATEGORY_MAX_LEN);
+}

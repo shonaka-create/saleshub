@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { requireSession } from "@/lib/auth";
 import { requireProAccess } from "@/lib/plan";
 import { createSupabaseAdmin } from "@/lib/supabase";
-import { TEMPLATE_CATEGORIES } from "@/lib/constants";
+import { normalizeTemplateCategory } from "@/lib/constants";
 import {
   TEMPLATE_BUCKET,
   TEMPLATE_MAX_FILE_SIZE,
@@ -78,9 +78,7 @@ export async function finalizeTemplateUpload(input: {
   const { data: info, error } = await supabase.storage.from(TEMPLATE_BUCKET).info(input.path);
   if (error || !info) return { error: "ファイルのアップロードを確認できませんでした" };
 
-  const category = (TEMPLATE_CATEGORIES as readonly string[]).includes(input.category)
-    ? input.category
-    : "OTHER";
+  const category = normalizeTemplateCategory(input.category);
 
   await db.template.create({
     data: {
@@ -129,9 +127,7 @@ export async function createUrlTemplate(input: {
   const normalized = normalizeTemplateUrl(input.url);
   if ("error" in normalized) return { error: normalized.error };
 
-  const category = (TEMPLATE_CATEGORIES as readonly string[]).includes(input.category)
-    ? input.category
-    : "OTHER";
+  const category = normalizeTemplateCategory(input.category);
 
   await db.template.create({
     data: {
@@ -167,7 +163,7 @@ export async function updateTemplate(id: string, formData: FormData): Promise<{ 
     where: { id, orgId: session.org.id },
     data: {
       name,
-      category: (TEMPLATE_CATEGORIES as readonly string[]).includes(category) ? category : "OTHER",
+      category: normalizeTemplateCategory(category),
       description: description || null,
       ...(sourceUrl ? { sourceUrl } : {}),
     },

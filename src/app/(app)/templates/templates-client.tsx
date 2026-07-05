@@ -10,7 +10,7 @@ import {
   updateTemplate,
   deleteTemplate,
 } from "@/app/actions/templates";
-import { TEMPLATE_CATEGORIES, TEMPLATE_CATEGORY_LABELS } from "@/lib/constants";
+import { TEMPLATE_CATEGORIES, TEMPLATE_CATEGORY_LABELS, TEMPLATE_CATEGORY_MAX_LEN, templateCategoryLabel } from "@/lib/constants";
 import { TEMPLATE_BUCKET, templateFileType, templateUrlType, urlHost, formatFileSize } from "@/lib/templates";
 import { Card, Badge, EmptyState, btnPrimary, btnSecondary, inputCls, labelCls, selectCls } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
@@ -37,6 +37,14 @@ export function TemplateLibrary({ templates }: { templates: TemplateItem[] }) {
     const c: Record<string, number> = { ALL: templates.length };
     for (const t of templates) c[t.category] = (c[t.category] ?? 0) + 1;
     return c;
+  }, [templates]);
+
+  // このユーザー(組織)が作成した自由入力カテゴリ。フィルタタブとカテゴリ選択肢に反映する。
+  const customCategories = useMemo(() => {
+    const preset = new Set<string>(TEMPLATE_CATEGORIES);
+    const set = new Set<string>();
+    for (const t of templates) if (!preset.has(t.category)) set.add(t.category);
+    return [...set].sort((a, b) => a.localeCompare(b, "ja"));
   }, [templates]);
 
   const filtered = useMemo(() => {
@@ -71,9 +79,15 @@ export function TemplateLibrary({ templates }: { templates: TemplateItem[] }) {
         </button>
       </div>
 
-      {/* カテゴリタブ */}
+      {/* カテゴリタブ (プリセット + 自由入力カテゴリ) */}
       <div className="mb-6 flex flex-wrap gap-2">
-        {[["ALL", "すべて"], ...TEMPLATE_CATEGORIES.map((c) => [c, TEMPLATE_CATEGORY_LABELS[c]])].map(
+        {(
+          [
+            ["ALL", "すべて"],
+            ...TEMPLATE_CATEGORIES.map((c) => [c, TEMPLATE_CATEGORY_LABELS[c]] as [string, string]),
+            ...customCategories.map((c) => [c, c] as [string, string]),
+          ] as [string, string][]
+        ).map(
           ([key, label]) => (
             <button
               key={key}
@@ -112,8 +126,10 @@ export function TemplateLibrary({ templates }: { templates: TemplateItem[] }) {
         </div>
       )}
 
-      {uploadOpen && <UploadDialog onClose={() => setUploadOpen(false)} />}
-      {editing && <EditDialog template={editing} onClose={() => setEditing(null)} />}
+      {uploadOpen && <UploadDialog onClose={() => setUploadOpen(false)} customCategories={customCategories} />}
+      {editing && (
+        <EditDialog template={editing} onClose={() => setEditing(null)} customCategories={customCategories} />
+      )}
     </div>
   );
 }
@@ -134,7 +150,7 @@ function TemplateCard({ template: t, onEdit }: { template: TemplateItem; onEdit:
             {t.name}
           </p>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <Badge className="bg-akane-50 text-akane-700">{TEMPLATE_CATEGORY_LABELS[t.category] ?? t.category}</Badge>
+            <Badge className="bg-akane-50 text-akane-700">{templateCategoryLabel(t.category)}</Badge>
             <Badge className="bg-slate-100 text-slate-500">{ft.label}</Badge>
           </div>
         </div>
@@ -190,6 +206,73 @@ function TemplateCard({ template: t, onEdit }: { template: TemplateItem; onEdit:
   );
 }
 
+// カテゴリ選択。プリセット + 既存の自由入力カテゴリから選ぶか、「＋ 新しいカテゴリ」で自由入力する。
+const NEW_CATEGORY = "__NEW__";
+function CategoryField({
+  value,
+  onChange,
+  customCategories,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  customCategories: string[];
+}) {
+  const options = [
+    ...TEMPLATE_CATEGORIES.map((c) => ({ value: c, label: TEMPLATE_CATEGORY_LABELS[c] })),
+    ...customCategories.map((c) => ({ value: c, label: c })),
+  ];
+  const known = options.some((o) => o.value === value);
+  // 既知カテゴリでなく空でもない = 新規入力中
+  const [adding, setAdding] = useState(!known && value !== "");
+
+  if (adding) {
+    return (
+      <div className="flex gap-2">
+        <input
+          autoFocus
+          value={value}
+          onChange={(e) => onChange(e.target.value.slice(0, TEMPLATE_CATEGORY_MAX_LEN))}
+          placeholder="新しいカテゴリ名"
+          maxLength={TEMPLATE_CATEGORY_MAX_LEN}
+          className={inputCls}
+        />
+        <button
+          type="button"
+          onClick={() => {
+            setAdding(false);
+            onChange(options[0]?.value ?? "OTHER");
+          }}
+          className={btnSecondary}
+        >
+          一覧から選ぶ
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <select
+      value={known ? value : options[0]?.value ?? "OTHER"}
+      onChange={(e) => {
+        if (e.target.value === NEW_CATEGORY) {
+          setAdding(true);
+          onChange("");
+        } else {
+          onChange(e.target.value);
+        }
+      }}
+      className={`${selectCls} w-full`}
+    >
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+      <option value={NEW_CATEGORY}>＋ 新しいカテゴリを入力…</option>
+    </select>
+  );
+}
+
 function Dialog({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" onClick={onClose}>
@@ -209,7 +292,7 @@ function Dialog({ title, onClose, children }: { title: string; onClose: () => vo
   );
 }
 
-function UploadDialog({ onClose }: { onClose: () => void }) {
+function UploadDialog({ onClose, customCategories }: { onClose: () => void; customCategories: string[] }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<"file" | "url">("file");
@@ -400,13 +483,7 @@ function UploadDialog({ onClose }: { onClose: () => void }) {
 
         <div>
           <label className={labelCls}>カテゴリ</label>
-          <select value={category} onChange={(e) => setCategory(e.target.value)} className={`${selectCls} w-full`}>
-            {TEMPLATE_CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {TEMPLATE_CATEGORY_LABELS[c]}
-              </option>
-            ))}
-          </select>
+          <CategoryField value={category} onChange={setCategory} customCategories={customCategories} />
         </div>
 
         <div>
@@ -435,10 +512,19 @@ function UploadDialog({ onClose }: { onClose: () => void }) {
   );
 }
 
-function EditDialog({ template: t, onClose }: { template: TemplateItem; onClose: () => void }) {
+function EditDialog({
+  template: t,
+  onClose,
+  customCategories,
+}: {
+  template: TemplateItem;
+  onClose: () => void;
+  customCategories: string[];
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [category, setCategory] = useState(t.category);
   const isUrl = !!t.sourceUrl;
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -446,7 +532,9 @@ function EditDialog({ template: t, onClose }: { template: TemplateItem; onClose:
     if (busy) return;
     setBusy(true);
     setError(null);
-    const res = await updateTemplate(t.id, new FormData(e.currentTarget));
+    const fd = new FormData(e.currentTarget);
+    fd.set("category", category); // CategoryField は name を持たないので明示的に載せる
+    const res = await updateTemplate(t.id, fd);
     if (res.error) {
       setError(res.error);
       setBusy(false);
@@ -465,13 +553,7 @@ function EditDialog({ template: t, onClose }: { template: TemplateItem; onClose:
         </div>
         <div>
           <label className={labelCls}>カテゴリ</label>
-          <select name="category" defaultValue={t.category} className={`${selectCls} w-full`}>
-            {TEMPLATE_CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {TEMPLATE_CATEGORY_LABELS[c]}
-              </option>
-            ))}
-          </select>
+          <CategoryField value={category} onChange={setCategory} customCategories={customCategories} />
         </div>
         <div>
           <label className={labelCls}>説明 (任意)</label>
