@@ -100,11 +100,14 @@ export async function cancelProPlan(formData: FormData) {
   const [org, seats] = await Promise.all([
     db.organization.findUniqueOrThrow({
       where: { id: session.org.id },
-      select: { id: true, plan: true, stripeSubscriptionId: true },
+      select: { id: true, plan: true, trialEndsAt: true, stripeSubscriptionId: true },
     }),
     db.membership.count({ where: { orgId: session.org.id } }),
   ]);
-  const wasSubscribed = org.plan === "PRO" && !!org.stripeSubscriptionId;
+  // トライアル中の解約は課金前のキャンセル (一切請求されない) なので「課金中を解約」に数えない。
+  // webhook (customer.subscription.deleted) の canceledInTrial 判定と定義を揃える。
+  const inTrial = org.trialEndsAt != null && org.trialEndsAt.getTime() > Date.now();
+  const wasSubscribed = org.plan === "PRO" && !!org.stripeSubscriptionId && !inTrial;
   const monthlyJpy = wasSubscribed ? seatTotal(PRO_PRICE_JPY, Math.max(1, seats)) : 0;
 
   const stripe = getStripe();
@@ -164,8 +167,10 @@ export async function cancelBasePlan(formData: FormData) {
     }),
     db.membership.count({ where: { orgId: session.org.id } }),
   ]);
-  // 解約時点で課金中だったか / 失う月額 (MRR) を確定させておく
-  const wasSubscribed = !!org.stripeBaseSubscriptionId || org.basePlanStatus === "ACTIVE";
+  // 解約時点で「実際に課金されていた」か / 失う月額 (MRR) を確定させておく。
+  // 運営/無償組織 (basePlanStatus=ACTIVE だが Stripe サブスク無し) は実請求がないので除外し、
+  // 管理画面の realBase (ACTIVE かつ stripeBaseSubscriptionId != null) と定義を揃える。
+  const wasSubscribed = !!org.stripeBaseSubscriptionId;
   const monthlyJpy = wasSubscribed ? seatTotal(BASE_PRICE_JPY, Math.max(1, seats)) : 0;
 
   // 課金中なら Stripe サブスクリプションをキャンセル (webhook 経由でも CANCELED になるが、

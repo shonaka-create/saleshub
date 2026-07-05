@@ -88,14 +88,24 @@ export default async function AdminPage() {
 
   const now = Date.now();
 
-  // 席課金の月額 (実請求とみなす: 基本=課金中 / Pro=PRO課金中でトライアル以外 / TEAM=加入中)
-  const orgMonthly = (o: (typeof orgs)[number], subscribed: boolean) => {
+  // 「実際に課金されている」= 実 Stripe サブスクリプションを持つこと。
+  // 運営組織のように basePlanStatus=ACTIVE を手動セットしただけ (stripe*SubscriptionId=null) の
+  // 無償組織は、課金中カウント・MRR から除外する。
+  type Org = (typeof orgs)[number];
+  const realBase = (o: Org) => o.basePlanStatus === "ACTIVE" && o.stripeBaseSubscriptionId != null;
+  const realPro = (o: Org) =>
+    o.plan === "PRO" && o.stripeSubscriptionId != null && !planStatus(o).stripeTrialing;
+  const realTeam = (o: Org) => o.teamPlan === "TEAM" && o.stripeTeamSubscriptionId != null;
+  const compedBase = (o: Org) => o.basePlanStatus === "ACTIVE" && o.stripeBaseSubscriptionId == null;
+
+  // 席課金の月額 (実 Stripe サブスクのある組織のみを実請求として計上)
+  const orgMonthly = (o: Org) => {
     const seats = Math.max(1, o.memberships.length);
-    const pro = planStatus(o);
-    const base = subscribed ? seatTotal(BASE_PRICE_JPY, seats) : 0;
-    const proFee = pro.isPro && !pro.stripeTrialing ? seatTotal(PRO_PRICE_JPY, seats) : 0;
-    const teamFee = o.teamPlan === "TEAM" ? seatTotal(TEAM_PRICE_JPY, seats) : 0;
-    return base + proFee + teamFee;
+    return (
+      (realBase(o) ? seatTotal(BASE_PRICE_JPY, seats) : 0) +
+      (realPro(o) ? seatTotal(PRO_PRICE_JPY, seats) : 0) +
+      (realTeam(o) ? seatTotal(TEAM_PRICE_JPY, seats) : 0)
+    );
   };
 
   const withStatus = orgs.map((o) => ({
@@ -105,19 +115,20 @@ export default async function AdminPage() {
     seats: Math.max(1, o.memberships.length),
   }));
 
-  // ===== プラン別の集計 (基本 / Pro / TEAM) =====
-  const basePaying = withStatus.filter((x) => x.status.subscribed);
+  // ===== プラン別の集計 (基本 / Pro / TEAM) — 実課金のみを課金中/MRRに計上 =====
+  const basePaying = withStatus.filter((x) => realBase(x.org));
+  const baseComped = withStatus.filter((x) => compedBase(x.org)); // 運営/無償で有効な組織
   const baseFree = withStatus.filter((x) => !x.status.subscribed && x.status.inFreePeriod);
   const baseCanceled = withStatus.filter((x) => x.status.canceled);
   const baseExpired = withStatus.filter((x) => !x.status.hasAccess && !x.status.canceled);
   const baseMrr = basePaying.reduce((s, x) => s + seatTotal(BASE_PRICE_JPY, x.seats), 0);
 
-  const proPaying = withStatus.filter((x) => x.pro.isPro && !x.pro.stripeTrialing);
+  const proPaying = withStatus.filter((x) => realPro(x.org));
   const proTrial = withStatus.filter((x) => x.pro.inTrial);
   const proMrr = proPaying.reduce((s, x) => s + seatTotal(PRO_PRICE_JPY, x.seats), 0);
 
-  const teamOrgs = withStatus.filter((x) => x.org.teamPlan === "TEAM");
-  const teamMrr = teamOrgs.reduce((s, x) => s + seatTotal(TEAM_PRICE_JPY, x.seats), 0);
+  const teamPaying = withStatus.filter((x) => realTeam(x.org));
+  const teamMrr = teamPaying.reduce((s, x) => s + seatTotal(TEAM_PRICE_JPY, x.seats), 0);
 
   const totalMrr = baseMrr + proMrr + teamMrr;
   const churnDenom = basePaying.length + baseCanceled.length;
@@ -141,11 +152,12 @@ export default async function AdminPage() {
       price: `¥${BASE_PRICE_JPY}/人`,
       accent: "bg-sky-500",
       ring: "ring-sky-100",
-      countLabel: "課金中",
+      countLabel: "課金中 (実Stripe)",
       count: basePaying.length,
       mrr: baseMrr,
       breakdown: [
         { label: "無料期間中", value: baseFree.length, cls: "bg-emerald-100 text-emerald-800" },
+        { label: "運営/無償", value: baseComped.length, cls: "bg-slate-100 text-slate-500" },
         { label: "解約", value: baseCanceled.length, cls: "bg-rose-100 text-rose-700" },
         { label: "期限切れ", value: baseExpired.length, cls: "bg-slate-200 text-slate-600" },
       ],
@@ -169,16 +181,20 @@ export default async function AdminPage() {
       price: `¥${TEAM_PRICE_JPY.toLocaleString()}/人`,
       accent: "bg-violet-500",
       ring: "ring-violet-100",
-      countLabel: "加入中",
-      count: teamOrgs.length,
+      countLabel: "加入中 (実Stripe)",
+      count: teamPaying.length,
       mrr: teamMrr,
       breakdown: [] as { label: string; value: number; cls: string }[],
     },
   ];
 
-  const baseBadge = (s: ReturnType<typeof baseStatus>) =>
+  const baseBadge = (s: ReturnType<typeof baseStatus>, comped: boolean) =>
     s.subscribed ? (
-      <Badge className="bg-sky-100 text-sky-800">課金中</Badge>
+      comped ? (
+        <Badge className="bg-slate-100 text-slate-500">有効 (運営/無償)</Badge>
+      ) : (
+        <Badge className="bg-sky-100 text-sky-800">課金中</Badge>
+      )
     ) : s.inFreePeriod ? (
       <Badge className="bg-emerald-100 text-emerald-800">無料期間</Badge>
     ) : s.canceled ? (
@@ -290,7 +306,7 @@ export default async function AdminPage() {
                   const owner = org.memberships.find((m) => m.role === "OWNER")?.user;
                   const start = startByOrg.get(org.id);
                   const end = endByOrg.get(org.id);
-                  const monthly = orgMonthly(org, status.subscribed);
+                  const monthly = orgMonthly(org);
                   const termsOk = owner?.termsAcceptedAt != null;
                   const billingConsent = consentByOrg.has(org.id) || status.subscribed;
                   return (
@@ -298,13 +314,13 @@ export default async function AdminPage() {
                       <td className={`${td} font-medium text-slate-900`}>{org.name}</td>
                       <td className={td}>{owner ? `${owner.name} (${owner.email})` : "—"}</td>
                       <td className={td}>{fmtDateTime(org.createdAt)}</td>
-                      <td className={td}>{baseBadge(status)}</td>
+                      <td className={td}>{baseBadge(status, compedBase(org))}</td>
                       <td className={td}>{start ? fmtDate(start) : "—"}</td>
                       <td className={td}>
                         {end ? <span className="text-rose-600">{fmtDate(end)}</span> : "—"}
                       </td>
                       <td className={td}>
-                        {status.subscribed || org.plan === "PRO" || org.teamPlan === "TEAM" ? (
+                        {monthly > 0 ? (
                           <span className="font-medium text-slate-900">{yen(monthly)}</span>
                         ) : (
                           <span className="text-slate-400">—</span>
