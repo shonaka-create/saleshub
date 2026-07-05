@@ -2,6 +2,7 @@ import "server-only";
 import { buildRevenueReport, type RevenueReport } from "./revenue";
 import { addMonths, currentMonthKey } from "./months";
 import { parseInsightsSettings, type InsightsSettings } from "./plan";
+import { formatMoney } from "./currency";
 
 // ===== 経営分析 (Pro) =====
 // 契約・売上データから Web制作フリーランス / 小規模制作会社向けの
@@ -144,23 +145,35 @@ export async function buildInsightsReport(
   const grossMarginPct = rev3 > 0 ? ((rev3 - exp3) / rev3) * 100 : 0;
 
   // --- アラート: 外注費の上限超過 + 急増検知 ---
+  // 急増判定は「直前3ヶ月平均がある程度の規模」かつ「当月が確定済み」の場合のみ行う。
+  // 平均がほぼ0だと少額でも数百倍と表示され、入力ミスでない正常値を誤検知するため下限を設ける。
+  const OUTSOURCING_SPIKE_FLOOR = 30000; // これ未満の規模 (baseCurrency の額) では急増判定しない
+  const thisMonth = currentMonthKey();
   const alerts: InsightsAlert[] = [];
   for (let i = 0; i < months.length; i++) {
     const m = months[i];
     const cost = outsourcingCost[m];
-    if (settings.outsourcingLimit != null && cost > settings.outsourcingLimit) {
+
+    // ① 上限超過: 進行中の月でも既に超えていれば通知する (予算オーバーは早く気づきたい)
+    const limit = settings.outsourcingLimit;
+    const overLimit = limit != null && limit > 0 && cost > limit;
+    if (overLimit) {
       alerts.push({
         severity: "danger",
         month: m,
         title: "外注費が設定上限を超過",
-        detail: `外注費が上限を ${Math.round(((cost - settings.outsourcingLimit) / settings.outsourcingLimit) * 100)}% 超えています`,
+        detail: `上限 ${formatMoney(limit, report.baseCurrency)} に対し ${formatMoney(cost, report.baseCurrency)} (${(cost / limit).toFixed(1)}倍) です`,
       });
     }
-    // 急増検知: 直前3ヶ月平均の1.5倍超 (平均がある程度の規模の場合のみ)
-    if (i >= 3) {
+
+    // ② 急増検知: 直前3ヶ月平均の1.5倍超。ただし
+    //   - 上限超過を通知済みの月は重複を避けてスキップ
+    //   - 進行中の当月は部分データで倍率が歪むためスキップ
+    //   - 平均・当月とも一定規模以上のときのみ (near-zero 起因の誤検知を防ぐ)
+    if (i >= 3 && !overLimit && m !== thisMonth) {
       const prevAvg =
         (outsourcingCost[months[i - 1]] + outsourcingCost[months[i - 2]] + outsourcingCost[months[i - 3]]) / 3;
-      if (prevAvg > 0 && cost > prevAvg * 1.5) {
+      if (prevAvg >= OUTSOURCING_SPIKE_FLOOR && cost >= OUTSOURCING_SPIKE_FLOOR && cost > prevAvg * 1.5) {
         alerts.push({
           severity: "warning",
           month: m,
@@ -170,7 +183,7 @@ export async function buildInsightsReport(
       }
     }
   }
-  alerts.sort((a, b) => (a.month < b.month ? 1 : -1));
+  alerts.sort((a, b) => (a.month < b.month ? 1 : a.month > b.month ? -1 : 0));
 
   return {
     months,
