@@ -11,7 +11,7 @@ import { createClient } from "@supabase/supabase-js";
 const ADMIN_EMAIL = "nakaebisu.shotaro1543@gmail.com";
 const ADMIN_PASSWORD = "1543baske";
 const ADMIN_NAME = "中胡 翔太郎";
-const ADMIN_ORG_NAME = "AKANE WEB STUDIO (運営)";
+const ADMIN_ORG_NAME = "管理者用";
 
 const db = new PrismaClient({ datasourceUrl: process.env.DATABASE_URL_ADMIN });
 
