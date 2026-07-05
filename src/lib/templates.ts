@@ -27,6 +27,34 @@ export function templateFileType(fileName: string): TemplateFileType {
   return { label: ext ? ext.toUpperCase() : "ファイル", mark: "TXT", tile: "bg-slate-500" };
 }
 
+// URL登録テンプレートの表示情報 (リンク先サービスからアイコンタイルの文字と配色を推定)
+export function templateUrlType(url: string): TemplateFileType {
+  let host = "";
+  try {
+    host = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    // パースできないURLは汎用リンク扱い
+  }
+  if (host.includes("canva.")) return { label: "Canva", mark: "Cv", tile: "bg-sky-500" };
+  if (host === "x.com" || host.includes("twitter.")) return { label: "X", mark: "𝕏", tile: "bg-slate-900" };
+  if (host.includes("notion.")) return { label: "Notion", mark: "N", tile: "bg-slate-800" };
+  if (host.includes("figma.")) return { label: "Figma", mark: "Fig", tile: "bg-fuchsia-600" };
+  if (host.includes("youtube.") || host.includes("youtu.be")) return { label: "YouTube", mark: "▶", tile: "bg-red-600" };
+  if (host.includes("docs.google.") || host.includes("drive.google.") || host.includes("sheets.google."))
+    return { label: "Google", mark: "G", tile: "bg-blue-500" };
+  if (host.includes("instagram.")) return { label: "Instagram", mark: "IG", tile: "bg-pink-500" };
+  return { label: "リンク", mark: "🔗", tile: "bg-indigo-500" };
+}
+
+// URLからドメイン部分だけを取り出して表示用に整える
+export function urlHost(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;

@@ -55,7 +55,7 @@ export default async function TemplatesPage() {
     <div>
       <PageHeader
         title="テンプレート"
-        description="普段使う提案書・見積書・契約書などのファイル (Word / Excel / PowerPoint / PDF 等) を保管し、必要なときにダウンロードして使えます。"
+        description="普段使う提案書・見積書・契約書などのファイル (Word / Excel / PowerPoint / PDF 等) や、Canva・X・Notion などのURLを保管し、必要なときにすぐ開けます。"
       />
       <TemplateLibrary
         templates={templates.map((t) => ({
@@ -65,6 +65,7 @@ export default async function TemplatesPage() {
           category: t.category,
           fileName: t.fileName,
           fileSize: t.fileSize,
+          sourceUrl: t.sourceUrl,
           downloadCount: t.downloadCount,
           updatedAt: t.updatedAt.toISOString(),
         }))}

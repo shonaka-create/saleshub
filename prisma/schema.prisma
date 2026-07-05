@@ -350,8 +350,9 @@ model Template {
   name          String
   description   String?
   category      String   @default("OTHER") // PROPOSAL | QUOTE | CONTRACT | INVOICE | REPORT | OTHER
-  fileName      String // 元のファイル名 (ダウンロード時のファイル名に使う)
-  filePath      String // Supabase Storage 上のオブジェクトキー
+  fileName      String? // 元のファイル名 (ダウンロード時のファイル名に使う。URL登録時は null)
+  filePath      String? // Supabase Storage 上のオブジェクトキー (URL登録時は null)
+  sourceUrl     String? // 外部リンク登録の場合のURL (Canva / X / Notion 等。ファイル登録時は null)
   mimeType      String   @default("application/octet-stream")
   fileSize      Int      @default(0) // バイト
   downloadCount Int      @default(0)
