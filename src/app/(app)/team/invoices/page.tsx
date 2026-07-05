@@ -6,6 +6,8 @@ import { PageHeader, Card, Badge, btnPrimary, inputCls, selectCls, labelCls, Emp
 import { ConfirmButton } from "@/components/confirm-button";
 import { ToggleCheck } from "@/components/toggle-check";
 import { FileAttach } from "@/components/file-attach";
+import { TeamUpgradeNotice } from "@/components/team-upgrade-notice";
+import { currentUserHasTeamAccess } from "@/lib/plan";
 import { INVOICE_DIRECTIONS, INVOICE_DIRECTION_LABELS, INVOICE_FIELD_LABELS, type InvoiceDirection } from "@/lib/constants";
 import { createInvoice, toggleInvoiceFlag, toggleInvoiceDate, deleteInvoice } from "@/app/actions/invoices";
 
@@ -19,6 +21,18 @@ export default async function InvoicesPage() {
   const session = await requireSession();
   const orgId = session.org.id;
   const currency = session.org.baseCurrency;
+
+  if (!(await currentUserHasTeamAccess(orgId))) {
+    return (
+      <div>
+        <PageHeader title="🧾 請求書管理" description="受領/送付・必要項目・締切日の同意・入金/支払いを管理" />
+        <TeamUpgradeNotice
+          title="請求書管理はチーム機能です"
+          description="チームプランにアップグレードすると、発行・受領の請求書と入金・支払いをまとめて管理できます。"
+        />
+      </div>
+    );
+  }
 
   const [invoices, customers] = await Promise.all([
     db.invoice.findMany({

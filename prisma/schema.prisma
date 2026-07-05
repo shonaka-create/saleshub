@@ -35,6 +35,11 @@ model Organization {
   stripeCustomerId     String?
   stripeSubscriptionId String?
 
+  // ===== チームプラン (契約書/請求書/委託費管理 ＋ 今後のタスク/アサイン/WBS) =====
+  // TEAM は Pro を包含する (teamPlan=TEAM なら Pro 機能も解放)。lib/plan.ts 参照。
+  teamPlan                 String  @default("FREE") // FREE | TEAM
+  stripeTeamSubscriptionId String?
+
   memberships       Membership[]
   invitations       Invitation[]
   services          Service[]

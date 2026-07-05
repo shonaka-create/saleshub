@@ -1,7 +1,9 @@
 import { dbAdmin as db } from "./db";
 import { computeFreeUntil } from "./pricing";
 
-// 新規組織作成時の初期マスタ投入 (AKANE WEB STUDIO のサービス構成を既定値とする)
+// 新規組織作成時の初期マスタ投入。
+// サービス・プランは各社バラバラなので初期投入せず、ユーザーが自分で登録する (デフォルト未設定)。
+// 経費カテゴリのみ、会計上ほぼ共通の汎用区分を既定値として入れておく (設定画面から編集可)。
 // メンバーシップ成立前に実行されるため RLS をバイパスする dbAdmin を使う。
 export async function createOrganizationWithDefaults(name: string, ownerUserId: string) {
   // 基本プランの無料期間を登録時点で確定する (早期登録なら3ヶ月、通常は初月無料)
@@ -13,67 +15,6 @@ export async function createOrganizationWithDefaults(name: string, ownerUserId: 
       freeUntil,
       earlyBird,
       memberships: { create: { userId: ownerUserId, role: "OWNER" } },
-    },
-  });
-
-  await db.service.create({
-    data: {
-      orgId: org.id,
-      name: "SNS運用",
-      category: "SNS",
-      color: "#ec4899",
-      sortOrder: 0,
-      plans: {
-        create: [
-          { name: "Plan A (週1投稿)", initialFee: 0, monthlyFee: 47500, sortOrder: 0 },
-          { name: "Plan B (週2投稿)", initialFee: 0, monthlyFee: 71250, sortOrder: 1 },
-          { name: "Plan C (週3投稿+撮影)", initialFee: 0, monthlyFee: 142500, sortOrder: 2 },
-        ],
-      },
-    },
-  });
-  await db.service.create({
-    data: {
-      orgId: org.id,
-      name: "サイト制作",
-      category: "WEB",
-      color: "#6366f1",
-      sortOrder: 1,
-      plans: {
-        create: [
-          { name: "制作+運用パッケージ", initialFee: 57000, monthlyFee: 19000, sortOrder: 0 },
-        ],
-      },
-    },
-  });
-  await db.service.create({
-    data: {
-      orgId: org.id,
-      name: "human-hub",
-      category: "SAAS",
-      color: "#10b981",
-      sortOrder: 2,
-      plans: {
-        create: [
-          { name: "Standard", initialFee: 0, monthlyFee: 30000, sortOrder: 0 },
-          { name: "Pro", initialFee: 0, monthlyFee: 50000, sortOrder: 1 },
-        ],
-      },
-    },
-  });
-  await db.service.create({
-    data: {
-      orgId: org.id,
-      name: "tour-hub",
-      category: "SAAS",
-      color: "#f59e0b",
-      sortOrder: 3,
-      plans: {
-        create: [
-          { name: "Standard", initialFee: 0, monthlyFee: 30000, sortOrder: 0 },
-          { name: "Pro", initialFee: 0, monthlyFee: 50000, sortOrder: 1 },
-        ],
-      },
     },
   });
 

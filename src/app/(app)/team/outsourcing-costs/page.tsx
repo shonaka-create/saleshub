@@ -6,6 +6,8 @@ import { PageHeader, Card, Badge, btnPrimary, btnSecondary, inputCls, selectCls,
 import { ConfirmButton } from "@/components/confirm-button";
 import { ToggleCheck } from "@/components/toggle-check";
 import { CsvImport } from "@/components/csv-import";
+import { TeamUpgradeNotice } from "@/components/team-upgrade-notice";
+import { currentUserHasTeamAccess } from "@/lib/plan";
 import {
   createSubcontractor,
   deleteSubcontractor,
@@ -24,6 +26,18 @@ export default async function OutsourcingCostsPage() {
   const session = await requireSession();
   const orgId = session.org.id;
   const currency = session.org.baseCurrency;
+
+  if (!(await currentUserHasTeamAccess(orgId))) {
+    return (
+      <div>
+        <PageHeader title="💸 委託費管理" description="委託先の稼働を記録し、費用計上まで管理" />
+        <TeamUpgradeNotice
+          title="委託費管理はチーム機能です"
+          description="チームプランにアップグレードすると、委託先の稼働をだれが・いつ・何を・いくらで記録し費用計上まで管理できます。"
+        />
+      </div>
+    );
+  }
 
   const [subs, works, contracts] = await Promise.all([
     db.subcontractor.findMany({ where: { orgId }, orderBy: { createdAt: "asc" } }),

@@ -40,7 +40,7 @@ export default async function DashboardPage({
   const [org, openDeals, activeContracts, sysAdmin] = await Promise.all([
     db.organization.findUniqueOrThrow({
       where: { id: orgId },
-      select: { plan: true, trialEndsAt: true, settings: true, stripeCustomerId: true },
+      select: { plan: true, trialEndsAt: true, teamPlan: true, settings: true, stripeCustomerId: true },
     }),
     db.deal.findMany({
       where: { orgId, stage: { in: ["LEAD", "NEGOTIATION", "PROPOSAL"] } },

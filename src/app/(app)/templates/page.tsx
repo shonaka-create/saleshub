@@ -14,7 +14,7 @@ export default async function TemplatesPage() {
   const [org, sysAdmin] = await Promise.all([
     db.organization.findUniqueOrThrow({
       where: { id: session.org.id },
-      select: { plan: true, trialEndsAt: true },
+      select: { plan: true, trialEndsAt: true, teamPlan: true },
     }),
     isCurrentUserSystemAdmin(),
   ]);

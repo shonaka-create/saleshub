@@ -30,8 +30,13 @@ export type PlanStatus = {
   trialAvailable: boolean; // まだトライアルを開始していない
 };
 
-export function planStatus(org: { plan: string; trialEndsAt: Date | null }): PlanStatus {
+export function planStatus(org: {
+  plan: string;
+  trialEndsAt: Date | null;
+  teamPlan?: string | null; // TEAM は Pro を包含する。渡された場合のみ判定に含める。
+}): PlanStatus {
   const isPro = org.plan === "PRO";
+  const isTeam = org.teamPlan === "TEAM";
   const now = Date.now();
   const trialEndsAt = org.trialEndsAt;
   const trialActive = trialEndsAt != null && trialEndsAt.getTime() > now;
@@ -48,9 +53,39 @@ export function planStatus(org: { plan: string; trialEndsAt: Date | null }): Pla
     legacyTrial,
     trialEndsAt,
     trialDaysLeft,
-    hasAccess: isPro || legacyTrial,
-    trialAvailable: !isPro && trialEndsAt == null,
+    // TEAM プランは Pro 機能も利用可能にする
+    hasAccess: isPro || legacyTrial || isTeam,
+    // TEAM 加入済みならトライアル導線は不要
+    trialAvailable: !isPro && !isTeam && trialEndsAt == null,
   };
+}
+
+// ===== チームプラン (契約書/請求書/委託費管理) のアクセス制御 =====
+
+export function isTeamPlan(org: { teamPlan?: string | null }): boolean {
+  return org.teamPlan === "TEAM";
+}
+
+// チーム機能のサーバー側ガード。系管理者は課金状態に関わらず解放する。
+export async function requireTeamAccess(orgId: string): Promise<void> {
+  if (await isCurrentUserSystemAdmin()) return;
+  const org = await db.organization.findUniqueOrThrow({
+    where: { id: orgId },
+    select: { teamPlan: true },
+  });
+  if (!isTeamPlan(org)) {
+    throw new Error("この機能はチームプランでご利用いただけます");
+  }
+}
+
+// UI 用: 現在の組織がチーム機能を使えるか (系管理者を含む)。
+export async function currentUserHasTeamAccess(orgId: string): Promise<boolean> {
+  if (await isCurrentUserSystemAdmin()) return true;
+  const org = await db.organization.findUniqueOrThrow({
+    where: { id: orgId },
+    select: { teamPlan: true },
+  });
+  return isTeamPlan(org);
 }
 
 // Pro 機能のサーバー側ガード (テンプレートのアップロード/ダウンロード等から呼ぶ)。
@@ -60,7 +95,7 @@ export async function requireProAccess(orgId: string): Promise<void> {
   if (await isCurrentUserSystemAdmin()) return;
   const org = await db.organization.findUniqueOrThrow({
     where: { id: orgId },
-    select: { plan: true, trialEndsAt: true },
+    select: { plan: true, trialEndsAt: true, teamPlan: true }, // TEAM も Pro 扱い
   });
   if (!planStatus(org).hasAccess) {
     throw new Error("この機能は Pro プラン (または無料トライアル) でご利用いただけます");

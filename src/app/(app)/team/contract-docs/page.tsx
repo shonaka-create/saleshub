@@ -5,6 +5,8 @@ import { PageHeader, Card, Badge, btnPrimary, inputCls, selectCls, labelCls, Emp
 import { ConfirmButton } from "@/components/confirm-button";
 import { ToggleCheck } from "@/components/toggle-check";
 import { FileAttach } from "@/components/file-attach";
+import { TeamUpgradeNotice } from "@/components/team-upgrade-notice";
+import { currentUserHasTeamAccess } from "@/lib/plan";
 import { CONTRACT_DOC_STAGE_LABELS, CONTRACT_DOC_STAGE_COLORS } from "@/lib/constants";
 import { createContractDoc, toggleContractDocStage, deleteContractDoc } from "@/app/actions/contract-docs";
 
@@ -38,6 +40,18 @@ function stageOf(d: DocRow): keyof typeof CONTRACT_DOC_STAGE_LABELS {
 export default async function ContractDocsPage() {
   const session = await requireSession();
   const orgId = session.org.id;
+
+  if (!(await currentUserHasTeamAccess(orgId))) {
+    return (
+      <div>
+        <PageHeader title="📄 契約書管理" description="契約書を回せているか・同意を得ているか・保管できているかを追跡" />
+        <TeamUpgradeNotice
+          title="契約書管理はチーム機能です"
+          description="チームプランにアップグレードすると、契約書の送付・締結・保管をまとめて管理できます。"
+        />
+      </div>
+    );
+  }
 
   const [docs, customers, contracts] = await Promise.all([
     db.contractDoc.findMany({

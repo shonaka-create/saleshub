@@ -15,7 +15,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   // テンプレートは Pro 機能 (トライアル含む)
   const org = await db.organization.findUniqueOrThrow({
     where: { id: session.org.id },
-    select: { plan: true, trialEndsAt: true },
+    select: { plan: true, trialEndsAt: true, teamPlan: true },
   });
   if (!planStatus(org).hasAccess) {
     return new NextResponse("Pro プランへの登録が必要です", { status: 403 });

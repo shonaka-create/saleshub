@@ -84,7 +84,8 @@ export async function register(_prev: AuthState, formData: FormData): Promise<Au
   const signInError = await signIn(email, password);
   if (signInError) return { error: "アカウントは作成されました。ログイン画面からログインしてください" };
   await setCurrentOrgCookie(org.id);
-  redirect("/dashboard");
+  // 新規登録直後は Pro 前提の経営数値分析ではなく、まず顧客管理から使い始めてもらう。
+  redirect("/customers");
 }
 
 export async function login(_prev: AuthState, formData: FormData): Promise<AuthState> {

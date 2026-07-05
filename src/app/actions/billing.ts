@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db, dbAdmin } from "@/lib/db";
 import { requireSession, isAdmin } from "@/lib/auth";
-import { getStripe, proPriceId, appUrl } from "@/lib/stripe";
-import { TRIAL_DAYS } from "@/lib/plan";
+import { getStripe, proPriceId, teamPriceId, appUrl } from "@/lib/stripe";
+import { TRIAL_DAYS, TEAM_PRICE_JPY } from "@/lib/plan";
 
 // ===== Pro プラン課金 (Stripe) =====
 
@@ -92,6 +92,53 @@ export async function startProCheckout() {
   });
 
   redirect(checkout.url ?? "/dashboard");
+}
+
+// ===== チームプラン課金 (Stripe) =====
+// 契約書/請求書/委託費管理 + 今後のタスク/アサイン/WBS。TEAM は Pro 機能も包含する。
+// トライアルなし・継続課金への同意 (consent) 必須。
+export async function startTeamCheckout(formData: FormData) {
+  const session = await requireSession();
+  if (!isAdmin(session.role)) redirect("/billing?billing=forbidden");
+  if (formData.get("consent") !== "on") redirect("/billing?billing=consent");
+
+  const stripe = getStripe();
+  const price = teamPriceId();
+  if (!stripe || !price) redirect("/billing?billing=team_unconfigured");
+
+  const org = await db.organization.findUniqueOrThrow({
+    where: { id: session.org.id },
+    select: { id: true, teamPlan: true, stripeCustomerId: true },
+  });
+  if (org.teamPlan === "TEAM") redirect("/team");
+  const seats = Math.max(1, await db.membership.count({ where: { orgId: org.id } }));
+
+  await dbAdmin.billingEvent
+    .create({
+      data: {
+        orgId: org.id,
+        orgName: session.org.name,
+        email: session.user.email,
+        type: "TEAM_CONSENT",
+        detail: `チームプラン課金への同意 (月額¥${TEAM_PRICE_JPY}/人の継続課金) — ${seats}席で Checkout へ`,
+      },
+    })
+    .catch(() => {});
+
+  const checkout = await stripe.checkout.sessions.create({
+    mode: "subscription",
+    line_items: [{ price, quantity: seats }],
+    client_reference_id: org.id,
+    ...(org.stripeCustomerId
+      ? { customer: org.stripeCustomerId }
+      : { customer_email: session.user.email }),
+    metadata: { orgId: org.id, plan: "TEAM" },
+    subscription_data: { metadata: { orgId: org.id, plan: "TEAM" } },
+    success_url: `${appUrl()}/team?upgraded=1`,
+    cancel_url: `${appUrl()}/billing`,
+  });
+
+  redirect(checkout.url ?? "/billing");
 }
 
 // Stripe カスタマーポータル (支払い方法変更・解約) へリダイレクトする

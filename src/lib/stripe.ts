@@ -15,6 +15,10 @@ export function proPriceId(): string | null {
   return process.env.STRIPE_PRICE_ID_PRO ?? null;
 }
 
+export function teamPriceId(): string | null {
+  return process.env.STRIPE_PRICE_ID_TEAM ?? null;
+}
+
 export function appUrl(): string {
   return (
     process.env.NEXT_PUBLIC_APP_URL ??

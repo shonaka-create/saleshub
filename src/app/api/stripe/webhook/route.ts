@@ -8,10 +8,12 @@ import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { dbAdmin } from "@/lib/db";
 
-type PlanKind = "BASE" | "PRO";
+type PlanKind = "BASE" | "PRO" | "TEAM";
 
 function planKind(metadata: Stripe.Metadata | null | undefined): PlanKind {
-  return metadata?.plan === "BASE" ? "BASE" : "PRO";
+  if (metadata?.plan === "BASE") return "BASE";
+  if (metadata?.plan === "TEAM") return "TEAM";
+  return "PRO";
 }
 
 async function logEvent(orgId: string, type: string, detail: string) {
@@ -58,6 +60,16 @@ export async function POST(req: Request) {
             },
           });
           await logEvent(orgId, "BASE_SUBSCRIBED", "基本プラン (月額500円) 課金開始");
+        } else if (kind === "TEAM") {
+          await dbAdmin.organization.updateMany({
+            where: { id: orgId },
+            data: {
+              teamPlan: "TEAM",
+              stripeTeamSubscriptionId: subscriptionId,
+              ...(customerId ? { stripeCustomerId: customerId } : {}),
+            },
+          });
+          await logEvent(orgId, "TEAM_SUBSCRIBED", "チームプラン (月額3,000円) 課金開始 — Pro機能も解放");
         } else {
           // トライアル付き Checkout の場合はサブスクリプションから trial_end を取得して保存する
           let trialEnd: Date | null = null;
@@ -103,6 +115,15 @@ export async function POST(req: Request) {
             ...(typeof sub.customer === "string" ? { stripeCustomerId: sub.customer } : {}),
           },
         });
+      } else if (planKind(sub.metadata) === "TEAM") {
+        await dbAdmin.organization.updateMany({
+          where: { id: orgId },
+          data: {
+            teamPlan: active ? "TEAM" : "FREE",
+            stripeTeamSubscriptionId: sub.id,
+            ...(typeof sub.customer === "string" ? { stripeCustomerId: sub.customer } : {}),
+          },
+        });
       } else {
         await dbAdmin.organization.updateMany({
           where: { id: orgId },
@@ -135,6 +156,19 @@ export async function POST(req: Request) {
           await dbAdmin.organization.updateMany({
             where: { stripeBaseSubscriptionId: sub.id },
             data: { basePlanStatus: "CANCELED", stripeBaseSubscriptionId: null },
+          });
+        }
+      } else if (planKind(sub.metadata) === "TEAM") {
+        if (orgId) {
+          await dbAdmin.organization.updateMany({
+            where: { id: orgId },
+            data: { teamPlan: "FREE", stripeTeamSubscriptionId: null },
+          });
+          await logEvent(orgId, "TEAM_CANCELED", "チームプランを解約");
+        } else {
+          await dbAdmin.organization.updateMany({
+            where: { stripeTeamSubscriptionId: sub.id },
+            data: { teamPlan: "FREE", stripeTeamSubscriptionId: null },
           });
         }
       } else {
