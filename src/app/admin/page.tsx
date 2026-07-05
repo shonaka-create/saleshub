@@ -41,7 +41,7 @@ export default async function AdminPage() {
   });
   if (!me?.isSystemAdmin) redirect("/dashboard");
 
-  const [orgs, userCount, events, billingHistory] = await Promise.all([
+  const [orgs, userCount, events, billingHistory, surveys] = await Promise.all([
     dbAdmin.organization.findMany({
       orderBy: { createdAt: "desc" },
       include: {
@@ -57,7 +57,23 @@ export default async function AdminPage() {
       orderBy: { createdAt: "asc" },
       select: { orgId: true, type: true, createdAt: true },
     }),
+    // 契約管理 (解約サマリ) の集計元: 構造化された解約アンケート
+    dbAdmin.cancellationSurvey.findMany({ orderBy: { createdAt: "desc" } }),
   ]);
+
+  // 解約理由の内訳・改善希望の集計 (件数の多い順)
+  const reasonTally = new Map<string, number>();
+  const improvementTally = new Map<string, number>();
+  for (const s of surveys) {
+    reasonTally.set(s.reason || "未選択", (reasonTally.get(s.reason || "未選択") ?? 0) + 1);
+    for (const imp of s.improvements.split("・").map((x) => x.trim()).filter(Boolean)) {
+      improvementTally.set(imp, (improvementTally.get(imp) ?? 0) + 1);
+    }
+  }
+  const sortedReasons = [...reasonTally.entries()].sort((a, b) => b[1] - a[1]);
+  const sortedImprovements = [...improvementTally.entries()].sort((a, b) => b[1] - a[1]);
+  const lostMrr = surveys.reduce((sum, s) => sum + (s.wasSubscribed ? s.monthlyJpy : 0), 0);
+  const surveyMax = Math.max(1, ...sortedReasons.map(([, n]) => n));
 
   // 利用ログから組織ごとの課金開始日/解約日/課金同意有無を復元する
   const startByOrg = new Map<string, Date>();
@@ -226,6 +242,99 @@ export default async function AdminPage() {
               </tbody>
             </table>
           </div>
+        </Card>
+
+        {/* 契約管理 (解約サマリ) */}
+        <Card className="mb-6 overflow-hidden">
+          <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-100 px-4 py-3">
+            <h2 className="text-sm font-semibold text-slate-800">契約管理 — 解約サマリ ({surveys.length})</h2>
+            <span className="text-xs text-slate-500">
+              失った月額 (MRR): <span className="font-semibold text-rose-600">{yen(lostMrr)}</span>
+            </span>
+          </div>
+
+          {surveys.length === 0 ? (
+            <p className="px-4 py-8 text-center text-sm text-slate-400">まだ解約はありません</p>
+          ) : (
+            <>
+              {/* 理由・改善希望の内訳 */}
+              <div className="grid gap-6 border-b border-slate-100 px-4 py-4 sm:grid-cols-2">
+                <div>
+                  <p className="mb-2 text-xs font-semibold text-slate-500">解約理由の内訳</p>
+                  <ul className="space-y-1.5">
+                    {sortedReasons.map(([label, n]) => (
+                      <li key={label} className="flex items-center gap-2 text-sm">
+                        <span className="w-52 shrink-0 truncate text-slate-700" title={label}>
+                          {label}
+                        </span>
+                        <span className="h-2 rounded-full bg-rose-400" style={{ width: `${(n / surveyMax) * 100}%`, minWidth: 8 }} />
+                        <span className="text-xs font-medium text-slate-500">{n}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <p className="mb-2 text-xs font-semibold text-slate-500">改善すれば戻りたい点</p>
+                  {sortedImprovements.length === 0 ? (
+                    <p className="text-sm text-slate-400">回答なし</p>
+                  ) : (
+                    <ul className="flex flex-wrap gap-1.5">
+                      {sortedImprovements.map(([label, n]) => (
+                        <li key={label}>
+                          <Badge className="bg-amber-100 text-amber-800">
+                            {label} · {n}
+                          </Badge>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+
+              {/* 個別回答 (自由記述つき) */}
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-max border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50">
+                      <th className={th}>解約日時</th>
+                      <th className={th}>組織</th>
+                      <th className={th}>状態</th>
+                      <th className={th}>失った月額</th>
+                      <th className={th}>主な理由</th>
+                      <th className={th}>改善希望</th>
+                      <th className={th}>自由記述</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {surveys.map((s) => (
+                      <tr key={s.id} className="border-b border-slate-100 align-top hover:bg-slate-50">
+                        <td className={td}>{fmtDateTime(s.createdAt)}</td>
+                        <td className={td}>
+                          <div className="font-medium text-slate-900">{s.orgName ?? "—"}</div>
+                          <div className="text-xs text-slate-400">{s.email ?? ""}</div>
+                        </td>
+                        <td className={td}>
+                          {s.wasSubscribed ? (
+                            <Badge className="bg-rose-100 text-rose-700">課金中を解約</Badge>
+                          ) : (
+                            <Badge className="bg-slate-200 text-slate-600">無料期間中</Badge>
+                          )}
+                        </td>
+                        <td className={td}>
+                          {s.wasSubscribed ? <span className="font-medium text-rose-600">{yen(s.monthlyJpy)}</span> : "—"}
+                        </td>
+                        <td className={td}>{s.reason || "—"}</td>
+                        <td className={`${td} max-w-xs whitespace-normal text-slate-600`}>{s.improvements || "—"}</td>
+                        <td className={`${td} max-w-sm whitespace-normal text-slate-600`}>
+                          {s.detail ? s.detail : <span className="text-slate-300">—</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </Card>
 
         {/* 利用ログ */}

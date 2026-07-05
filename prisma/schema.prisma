@@ -76,6 +76,24 @@ model BillingEvent {
   @@index([createdAt])
 }
 
+// 解約アンケートの構造化保存。BillingEvent と違い理由・改善希望を集計しやすい形で持ち、
+// システム管理者画面の「契約管理」サマリの集計元になる。dbAdmin からのみ読み書きする
+// (RLS 有効・ポリシーなし → akane_app からはアクセス不可)。
+model CancellationSurvey {
+  id            String   @id @default(cuid())
+  orgId         String? // 組織削除後も回答を残すため外部キーにしない
+  orgName       String?
+  email         String? // 解約操作をしたユーザーのメール
+  reason        String   @default("") // 解約の主な理由 (単一選択)
+  improvements  String   @default("") // 改善希望 (複数選択を "・" 区切りで保存)
+  detail        String   @default("") // 自由記述 (任意)
+  wasSubscribed Boolean  @default(false) // 解約時点で課金中だったか (無料期間中の解約と区別)
+  monthlyJpy    Int      @default(0) // 解約時点の月額 (課金中なら失った MRR)
+  createdAt     DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 model Membership {
   id     String @id @default(cuid())
   userId String
@@ -247,10 +265,11 @@ model Contract {
 // ===== 契約手続きワークフロー (組織共通のチェックリストテンプレート) =====
 
 model ContractStepDef {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   orgId     String
   label     String // 例: 契約書送付, 署名回収, 初期費用請求, 入金確認, キックオフMTG
-  sortOrder Int    @default(0)
+  sortOrder Int     @default(0)
+  feature   String? // 定型プロセス種別 (constants.ts PROCEDURE_FEATURES: contract-doc | invoice | outsourcing-cost)。null は自由入力ステップ。
 
   org   Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
   steps ContractStep[]

@@ -42,7 +42,7 @@ const CHILD_TABLES: Array<[string, string, string]> = [
 
 // dbAdmin (postgres ロール) からのみ触るテーブル: RLS を有効化しポリシーを与えない
 // → akane_app からは一切アクセス不可になる (システム管理者向け利用ログ等)
-const ADMIN_ONLY_TABLES = ["BillingEvent"];
+const ADMIN_ONLY_TABLES = ["BillingEvent", "CancellationSurvey"];
 
 const ALL_TABLES = [
   "User",

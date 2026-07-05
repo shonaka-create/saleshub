@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { db, dbAdmin } from "@/lib/db";
 import { requireSession, isAdmin } from "@/lib/auth";
 import { getStripe, appUrl } from "@/lib/stripe";
-import { BASE_PRICE_JPY } from "@/lib/pricing";
+import { BASE_PRICE_JPY, seatTotal } from "@/lib/pricing";
 
 // ===== 基本プラン課金 (システム利用料: 初月無料 → 月額500円 / 人) =====
 // 課金量は「単価 × 組織のメンバー数」。Checkout 作成時点のメンバー数を quantity として渡す
@@ -91,10 +91,16 @@ export async function cancelBasePlan(formData: FormData) {
     String(formData.get("detail") ?? "").trim() || "(自由記述なし)";
   if (formData.get("confirm") !== "on") redirect("/settings/cancel?cancel=confirm");
 
-  const org = await db.organization.findUniqueOrThrow({
-    where: { id: session.org.id },
-    select: { id: true, basePlanStatus: true, stripeBaseSubscriptionId: true },
-  });
+  const [org, seats] = await Promise.all([
+    db.organization.findUniqueOrThrow({
+      where: { id: session.org.id },
+      select: { id: true, basePlanStatus: true, stripeBaseSubscriptionId: true },
+    }),
+    db.membership.count({ where: { orgId: session.org.id } }),
+  ]);
+  // 解約時点で課金中だったか / 失う月額 (MRR) を確定させておく
+  const wasSubscribed = !!org.stripeBaseSubscriptionId || org.basePlanStatus === "ACTIVE";
+  const monthlyJpy = wasSubscribed ? seatTotal(BASE_PRICE_JPY, Math.max(1, seats)) : 0;
 
   // 課金中なら Stripe サブスクリプションをキャンセル (webhook 経由でも CANCELED になるが、
   // 即時に利用停止・請求停止を確定させるためここでも状態を更新する)。
@@ -110,7 +116,23 @@ export async function cancelBasePlan(formData: FormData) {
     data: { basePlanStatus: "CANCELED", stripeBaseSubscriptionId: null },
   });
 
-  // 改善につながるアンケート回答を記録
+  // 契約管理サマリの集計元: 構造化したアンケート回答を保存
+  await dbAdmin.cancellationSurvey
+    .create({
+      data: {
+        orgId: org.id,
+        orgName: session.org.name,
+        email: session.user.email,
+        reason: reason || "未選択",
+        improvements: improvement,
+        detail: detail === "(自由記述なし)" ? "" : detail,
+        wasSubscribed,
+        monthlyJpy,
+      },
+    })
+    .catch(() => {});
+
+  // 改善につながるアンケート回答を利用ログにも記録 (時系列の一覧表示用)
   await dbAdmin.billingEvent
     .create({
       data: {
