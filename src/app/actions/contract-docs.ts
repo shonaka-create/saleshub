@@ -44,7 +44,6 @@ export async function createContractDoc(formData: FormData) {
       contractId,
       title,
       counterparty,
-      fileName: optStr(formData, "fileName"),
       fileUrl: optStr(formData, "fileUrl"),
       memo: optStr(formData, "memo"),
     },

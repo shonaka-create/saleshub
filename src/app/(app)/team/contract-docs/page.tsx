@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { PageHeader, Card, Badge, btnPrimary, inputCls, selectCls, labelCls, EmptyState } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
 import { ToggleCheck } from "@/components/toggle-check";
+import { FileAttach } from "@/components/file-attach";
 import { CONTRACT_DOC_STAGE_LABELS, CONTRACT_DOC_STAGE_COLORS } from "@/lib/constants";
 import { createContractDoc, toggleContractDocStage, deleteContractDoc } from "@/app/actions/contract-docs";
 
@@ -117,13 +118,10 @@ export default async function ContractDocsPage() {
                 ))}
               </select>
             </div>
-            <div>
-              <label className={labelCls}>保管ファイル名 (任意)</label>
-              <input name="fileName" placeholder="例: NDA_2026.pdf" className={inputCls} />
-            </div>
             <div className="sm:col-span-2">
               <label className={labelCls}>保管先URL (任意)</label>
               <input name="fileUrl" placeholder="Google Drive / Box などの共有リンク" className={inputCls} />
+              <p className="mt-1 text-xs text-slate-400">契約書ファイル (PDF等) は登録後に各カードから添付できます。</p>
             </div>
             <div className="sm:col-span-2">
               <label className={labelCls}>メモ (任意)</label>
@@ -159,13 +157,11 @@ export default async function ContractDocsPage() {
                         <> ・ <Link href={`/contracts/${d.contract.id}`} className="text-akane-600 hover:underline">{d.contract.name}</Link></>
                       )}
                     </p>
-                    {d.fileUrl ? (
+                    {d.fileUrl && (
                       <a href={d.fileUrl} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block text-xs text-akane-600 hover:underline">
-                        📎 {d.fileName || "保管ファイルを開く"}
+                        🔗 保管先リンクを開く
                       </a>
-                    ) : d.fileName ? (
-                      <p className="mt-1 text-xs text-slate-400">📎 {d.fileName}</p>
-                    ) : null}
+                    )}
                     {d.memo && <p className="mt-1 whitespace-pre-wrap break-words text-xs text-slate-500">{d.memo}</p>}
                   </div>
                   <ConfirmButton
@@ -193,6 +189,11 @@ export default async function ContractDocsPage() {
                     action={toggleContractDocStage.bind(null, d.id, "stored")}
                     label={<>③ 保管完了{d.storedAt && <span className="ml-1 text-[11px] text-slate-400">{fmtDate(d.storedAt)}</span>}</>}
                   />
+                </div>
+
+                <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3">
+                  <span className="text-xs text-slate-400">契約書ファイル</span>
+                  <FileAttach entity="contract-doc" id={d.id} fileName={d.fileName} fileSize={d.fileSize} />
                 </div>
               </Card>
             );

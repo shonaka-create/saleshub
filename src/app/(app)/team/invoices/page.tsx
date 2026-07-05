@@ -5,6 +5,7 @@ import { formatMoney } from "@/lib/currency";
 import { PageHeader, Card, Badge, btnPrimary, inputCls, selectCls, labelCls, EmptyState } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
 import { ToggleCheck } from "@/components/toggle-check";
+import { FileAttach } from "@/components/file-attach";
 import { INVOICE_DIRECTIONS, INVOICE_DIRECTION_LABELS, INVOICE_FIELD_LABELS, type InvoiceDirection } from "@/lib/constants";
 import { createInvoice, toggleInvoiceFlag, toggleInvoiceDate, deleteInvoice } from "@/app/actions/invoices";
 
@@ -192,6 +193,11 @@ export default async function InvoicesPage() {
                     action={toggleInvoiceDate.bind(null, i.id, "settledAt")}
                     label={<>{fl.settled}済{i.settledAt && <span className="ml-1 text-[11px] text-slate-400">{fmtDate(i.settledAt)}</span>}</>}
                   />
+                </div>
+
+                <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3">
+                  <span className="text-xs text-slate-400">請求書ファイル</span>
+                  <FileAttach entity="invoice" id={i.id} fileName={i.fileName} fileSize={i.fileSize} />
                 </div>
               </Card>
             );

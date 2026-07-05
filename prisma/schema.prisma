@@ -361,8 +361,11 @@ model ContractDoc {
   sentAt       DateTime? // ① 契約書を送付・回付した日
   agreedAt     DateTime? // ② 相手方の同意 (署名・締結) を得た日
   storedAt     DateTime? // ③ 保管 (原本・PDF 格納) を完了した日
-  fileName     String? // 保管ファイル名 (任意メモ)
   fileUrl      String? // 保管先URL (Drive等・任意)
+  filePath     String? // アップロードした実ファイルの Storage オブジェクトキー (attachments バケット)
+  fileName     String? // アップロードファイルの元の名前 (ダウンロード時のファイル名)
+  fileSize     Int       @default(0) // バイト
+  mimeType     String? // アップロードファイルの MIME タイプ
   memo         String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
@@ -393,6 +396,10 @@ model Invoice {
   dueDateAgreed  Boolean   @default(false) // 締切日に双方が同意しているか
   deliveredAt    DateTime? // 発行=送付日 / 受領=受領日
   settledAt      DateTime? // 発行=入金日 / 受領=支払日
+  filePath       String? // アップロードした請求書ファイルの Storage オブジェクトキー (attachments バケット)
+  fileName       String? // アップロードファイルの元の名前
+  fileSize       Int       @default(0) // バイト
+  mimeType       String? // アップロードファイルの MIME タイプ
   memo           String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt

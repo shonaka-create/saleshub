@@ -2,9 +2,10 @@ import Link from "next/link";
 import { requireSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/currency";
-import { PageHeader, Card, Badge, btnPrimary, inputCls, selectCls, labelCls, EmptyState } from "@/components/ui";
+import { PageHeader, Card, Badge, btnPrimary, btnSecondary, inputCls, selectCls, labelCls, EmptyState } from "@/components/ui";
 import { ConfirmButton } from "@/components/confirm-button";
 import { ToggleCheck } from "@/components/toggle-check";
+import { CsvImport } from "@/components/csv-import";
 import {
   createSubcontractor,
   deleteSubcontractor,
@@ -127,8 +128,29 @@ export default async function OutsourcingCostsPage() {
 
         {/* 稼働ログ */}
         <div className="lg:col-span-2">
+          {/* CSV運用: テンプレートを委託先へ渡し、記入済みを取り込む */}
+          <Card className="mb-4 border-sky-100 bg-sky-50/40 p-5">
+            <h2 className="mb-1 text-sm font-semibold text-slate-800">CSVで一括登録</h2>
+            <p className="mb-3 text-xs text-slate-500">
+              手入力せずに、委託先へ専用CSVを渡して記入してもらい、そのまま取り込めます。
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <a href="/api/outsourcing/csv-template" download className={btnSecondary}>
+                ⬇ 記入用CSVテンプレートを配布
+              </a>
+            </div>
+            {subs.length > 0 ? (
+              <div className="mt-3 border-t border-sky-100 pt-3">
+                <p className="mb-2 text-xs text-slate-500">記入済みCSVの取り込み先の委託先を選んでアップロード:</p>
+                <CsvImport subs={subs.map((s) => ({ id: s.id, name: s.name }))} />
+              </div>
+            ) : (
+              <p className="mt-2 text-xs text-slate-400">取り込みには先に委託先の登録が必要です。</p>
+            )}
+          </Card>
+
           <Card className="mb-4 p-5">
-            <h2 className="mb-3 text-sm font-semibold text-slate-800">稼働を記録</h2>
+            <h2 className="mb-3 text-sm font-semibold text-slate-800">稼働を記録（手入力）</h2>
             {subs.length === 0 ? (
               <p className="text-xs text-slate-400">先に委託先を追加してください。</p>
             ) : (

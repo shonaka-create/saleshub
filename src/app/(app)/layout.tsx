@@ -7,6 +7,7 @@ import { logout } from "../(auth)/actions";
 import { NavLinks, OrgSwitcher } from "./nav";
 import { AppShell } from "./app-shell";
 import { PlanExpiredModal, FreePeriodEndingModal } from "./plan-gate-modal";
+import { FreePeriodBanner } from "./free-period-banner";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await requireSession();
@@ -38,7 +39,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     return <PlanExpiredModal orgName={session.org.name} monthlyLabel={monthlyLabel} admin={admin} />;
   }
 
-  const fmtDate = (d: Date) => `${d.getMonth() + 1}月${d.getDate()}日`;
+  // 無料期間終了日は JST 固定で表示する (サーバーのローカル時刻 = Vercel では UTC のズレを防ぐ)。
+  const fmtDate = (d: Date) => {
+    const jst = new Date(d.toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
+    return `${jst.getMonth() + 1}月${jst.getDate()}日`;
+  };
   // 無料期間の残りが7日以内なら課金を促すポップアップ (閉じられる)。運営者には出さない。
   const showEndingModal =
     !me?.isSystemAdmin && !base.subscribed && base.inFreePeriod && base.freeDaysLeft <= 7;
@@ -101,20 +106,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </>
         }
       >
-        {/* 無料期間中の案内バナー */}
+        {/* 無料期間中の案内バナー (経営数値分析ページでは Pro トライアルバナーと重複するため非表示) */}
         {!base.subscribed && base.inFreePeriod && base.freeUntil && (
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-akane-200 bg-akane-50 px-4 py-2.5">
-            <p className="text-sm text-akane-800">
-              {base.earlyBird ? "🎉 早期登録特典 (3ヶ月無料) " : "初月無料 "}
-              — {fmtDate(base.freeUntil)}まで無料 (残り {base.freeDaysLeft}日)。以降は{monthlyLabel} です。
-            </p>
-            <Link
-              href="/billing"
-              className="text-sm font-semibold text-akane-700 hover:underline"
-            >
-              プランの確認・登録 →
-            </Link>
-          </div>
+          <FreePeriodBanner
+            earlyBird={base.earlyBird}
+            freeUntilLabel={fmtDate(base.freeUntil)}
+            freeDaysLeft={base.freeDaysLeft}
+            monthlyLabel={monthlyLabel}
+          />
         )}
         {children}
       </AppShell>

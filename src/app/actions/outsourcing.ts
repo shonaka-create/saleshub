@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireSession } from "@/lib/auth";
+import { decodeCsvBytes, parseOutsourcingCsv } from "@/lib/outsourcing-csv";
 
 const PATH = "/team/outsourcing-costs";
 
@@ -83,6 +84,49 @@ export async function deleteWork(id: string) {
   const session = await requireSession();
   await db.outsourcingWork.deleteMany({ where: { id, orgId: session.org.id } });
   revalidatePath(PATH);
+}
+
+// 委託先が記入した稼働報告CSVを取り込み、稼働ログに一括登録する。
+export async function importOutsourcingWorks(
+  formData: FormData
+): Promise<{ created: number; skipped: number; error?: string }> {
+  const session = await requireSession();
+  const orgId = session.org.id;
+
+  const subcontractorId = String(formData.get("subcontractorId") ?? "");
+  const sub = await db.subcontractor.findFirst({ where: { id: subcontractorId, orgId } });
+  if (!sub) return { created: 0, skipped: 0, error: "委託先を選択してください" };
+
+  const file = formData.get("csv");
+  if (!(file instanceof File) || file.size === 0) {
+    return { created: 0, skipped: 0, error: "CSVファイルを選択してください" };
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    return { created: 0, skipped: 0, error: "ファイルが大きすぎます (上限5MB)" };
+  }
+
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const text = decodeCsvBytes(bytes);
+  const { rows, skipped } = parseOutsourcingCsv(text);
+  if (rows.length === 0) {
+    return { created: 0, skipped, error: "取り込める行がありませんでした。フォーマットをご確認ください。" };
+  }
+
+  await db.outsourcingWork.createMany({
+    data: rows.map((r) => ({
+      orgId,
+      subcontractorId,
+      workedOn: r.workedOn,
+      performer: r.performer,
+      task: r.task,
+      hours: r.hours,
+      amount: r.amount,
+      memo: r.memo,
+    })),
+  });
+
+  revalidatePath(PATH);
+  return { created: rows.length, skipped };
 }
 
 // 稼働を「自社の費用として勘定した月 (YYYY-MM)」を記録/解除する。
