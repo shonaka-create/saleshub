@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { dbAdmin } from "@/lib/db";
 import { baseStatus, BASE_PRICE_JPY, seatTotal } from "@/lib/pricing";
-import { PRO_PRICE_JPY } from "@/lib/plan";
+import { planStatus, PRO_PRICE_JPY, TEAM_PRICE_JPY } from "@/lib/plan";
 import { Card, Badge } from "@/components/ui";
 
 export const metadata = { title: "システム管理 | Saleshub" };
@@ -87,41 +87,93 @@ export default async function AdminPage() {
   }
 
   const now = Date.now();
-  const withStatus = orgs.map((o) => ({ org: o, status: baseStatus(o, now) }));
 
-  // 席課金の月額 (課金中の組織のみを実請求とみなす)
+  // 席課金の月額 (実請求とみなす: 基本=課金中 / Pro=PRO課金中でトライアル以外 / TEAM=加入中)
   const orgMonthly = (o: (typeof orgs)[number], subscribed: boolean) => {
     const seats = Math.max(1, o.memberships.length);
+    const pro = planStatus(o);
     const base = subscribed ? seatTotal(BASE_PRICE_JPY, seats) : 0;
-    const pro = o.plan === "PRO" ? seatTotal(PRO_PRICE_JPY, seats) : 0;
-    return base + pro;
+    const proFee = pro.isPro && !pro.stripeTrialing ? seatTotal(PRO_PRICE_JPY, seats) : 0;
+    const teamFee = o.teamPlan === "TEAM" ? seatTotal(TEAM_PRICE_JPY, seats) : 0;
+    return base + proFee + teamFee;
   };
 
-  const counts = {
-    orgs: orgs.length,
-    users: userCount,
-    free: withStatus.filter((x) => !x.status.subscribed && x.status.inFreePeriod).length,
-    paying: withStatus.filter((x) => x.status.subscribed).length,
-    canceled: withStatus.filter((x) => x.status.canceled).length,
-    expired: withStatus.filter((x) => !x.status.hasAccess).length,
-    pro: orgs.filter((o) => o.plan === "PRO").length,
-  };
-  // 席課金ベースの月次売上 (MRR) と解約率
-  const mrr = withStatus.reduce((sum, x) => sum + orgMonthly(x.org, x.status.subscribed), 0);
-  const churnDenom = counts.paying + counts.canceled;
-  const churnRate = churnDenom > 0 ? (counts.canceled / churnDenom) * 100 : null;
+  const withStatus = orgs.map((o) => ({
+    org: o,
+    status: baseStatus(o, now),
+    pro: planStatus(o),
+    seats: Math.max(1, o.memberships.length),
+  }));
 
-  const tiles = [
-    { label: "登録組織数", value: `${counts.orgs}`, sub: `ユーザー ${counts.users}名` },
-    { label: "基本プラン課金中", value: `${counts.paying}`, sub: `席課金 ¥${BASE_PRICE_JPY}/人` },
-    { label: "月次売上 (MRR)", value: yen(mrr), sub: "課金中の席×単価の合計" },
-    { label: "無料期間中", value: `${counts.free}`, sub: "早期特典3ヶ月 / 初月無料" },
+  // ===== プラン別の集計 (基本 / Pro / TEAM) =====
+  const basePaying = withStatus.filter((x) => x.status.subscribed);
+  const baseFree = withStatus.filter((x) => !x.status.subscribed && x.status.inFreePeriod);
+  const baseCanceled = withStatus.filter((x) => x.status.canceled);
+  const baseExpired = withStatus.filter((x) => !x.status.hasAccess && !x.status.canceled);
+  const baseMrr = basePaying.reduce((s, x) => s + seatTotal(BASE_PRICE_JPY, x.seats), 0);
+
+  const proPaying = withStatus.filter((x) => x.pro.isPro && !x.pro.stripeTrialing);
+  const proTrial = withStatus.filter((x) => x.pro.inTrial);
+  const proMrr = proPaying.reduce((s, x) => s + seatTotal(PRO_PRICE_JPY, x.seats), 0);
+
+  const teamOrgs = withStatus.filter((x) => x.org.teamPlan === "TEAM");
+  const teamMrr = teamOrgs.reduce((s, x) => s + seatTotal(TEAM_PRICE_JPY, x.seats), 0);
+
+  const totalMrr = baseMrr + proMrr + teamMrr;
+  const churnDenom = basePaying.length + baseCanceled.length;
+  const churnRate = churnDenom > 0 ? (baseCanceled.length / churnDenom) * 100 : null;
+
+  // 全体サマリー (3枠) と、プラン別内訳カード (3枠)
+  const headline = [
+    { label: "登録組織数", value: `${orgs.length}`, sub: `ユーザー ${userCount}名` },
+    { label: "月次売上 (MRR 合計)", value: yen(totalMrr), sub: "基本 + Pro + TEAM の実課金" },
     {
-      label: "解約率",
+      label: "解約率 (基本プラン)",
       value: churnRate == null ? "—" : `${churnRate.toFixed(0)}%`,
-      sub: `解約 ${counts.canceled} / 期限切れ ${counts.expired}`,
+      sub: `解約 ${baseCanceled.length} / 期限切れ ${baseExpired.length}`,
     },
-    { label: "Pro (経営分析)", value: `${counts.pro}`, sub: `席課金 ¥${PRO_PRICE_JPY}/人` },
+  ];
+
+  const planCards = [
+    {
+      name: "基本プラン",
+      note: "システム利用料 (席課金)",
+      price: `¥${BASE_PRICE_JPY}/人`,
+      accent: "bg-sky-500",
+      ring: "ring-sky-100",
+      countLabel: "課金中",
+      count: basePaying.length,
+      mrr: baseMrr,
+      breakdown: [
+        { label: "無料期間中", value: baseFree.length, cls: "bg-emerald-100 text-emerald-800" },
+        { label: "解約", value: baseCanceled.length, cls: "bg-rose-100 text-rose-700" },
+        { label: "期限切れ", value: baseExpired.length, cls: "bg-slate-200 text-slate-600" },
+      ],
+    },
+    {
+      name: "Pro",
+      note: "経営数値分析・テンプレート",
+      price: `¥${PRO_PRICE_JPY}/人`,
+      accent: "bg-indigo-500",
+      ring: "ring-indigo-100",
+      countLabel: "課金中",
+      count: proPaying.length,
+      mrr: proMrr,
+      breakdown: [
+        { label: "トライアル中", value: proTrial.length, cls: "bg-amber-100 text-amber-800" },
+      ],
+    },
+    {
+      name: "TEAM",
+      note: "契約書・請求書・委託費管理",
+      price: `¥${TEAM_PRICE_JPY.toLocaleString()}/人`,
+      accent: "bg-violet-500",
+      ring: "ring-violet-100",
+      countLabel: "加入中",
+      count: teamOrgs.length,
+      mrr: teamMrr,
+      breakdown: [] as { label: string; value: number; cls: string }[],
+    },
   ];
 
   const baseBadge = (s: ReturnType<typeof baseStatus>) =>
@@ -153,13 +205,58 @@ export default async function AdminPage() {
           </Link>
         </div>
 
-        {/* サマリー */}
-        <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-          {tiles.map((t) => (
+        {/* 全体サマリー (3枠) */}
+        <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {headline.map((t) => (
             <Card key={t.label} className="p-4">
               <p className="text-xs font-medium text-slate-500">{t.label}</p>
               <p className="mt-1 text-2xl font-bold tracking-tight text-slate-900">{t.value}</p>
               <p className="mt-1 text-xs text-slate-400">{t.sub}</p>
+            </Card>
+          ))}
+        </div>
+
+        {/* プラン別内訳 (基本 / Pro / TEAM) */}
+        <div className="mb-2 text-xs font-semibold text-slate-500">プラン別の加入・課金状況</div>
+        <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+          {planCards.map((p) => (
+            <Card key={p.name} className={`overflow-hidden p-0 ring-1 ${p.ring}`}>
+              <div className={`h-1.5 w-full ${p.accent}`} />
+              <div className="p-4">
+                <div className="flex items-baseline justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">{p.name}</p>
+                    <p className="text-[11px] text-slate-400">{p.note}</p>
+                  </div>
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
+                    席課金 {p.price}
+                  </span>
+                </div>
+
+                <div className="mt-3 flex items-end justify-between">
+                  <div>
+                    <p className="text-[11px] text-slate-400">{p.countLabel}</p>
+                    <p className="text-3xl font-bold tracking-tight text-slate-900">
+                      {p.count}
+                      <span className="ml-1 text-sm font-medium text-slate-400">組織</span>
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[11px] text-slate-400">月次売上 (MRR)</p>
+                    <p className="text-xl font-bold text-slate-900">{yen(p.mrr)}</p>
+                  </div>
+                </div>
+
+                {p.breakdown.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1.5 border-t border-slate-100 pt-3">
+                    {p.breakdown.map((b) => (
+                      <Badge key={b.label} className={b.cls}>
+                        {b.label} {b.value}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
             </Card>
           ))}
         </div>
@@ -182,14 +279,14 @@ export default async function AdminPage() {
                   <th className={th}>月額 (席課金)</th>
                   <th className={th}>無料期間終了</th>
                   <th className={th}>特典</th>
-                  <th className={th}>Pro</th>
+                  <th className={th}>Pro / TEAM</th>
                   <th className={th}>同意状況</th>
                   <th className={th}>メンバー</th>
                   <th className={th}>顧客 / 契約</th>
                 </tr>
               </thead>
               <tbody>
-                {withStatus.map(({ org, status }) => {
+                {withStatus.map(({ org, status, pro }) => {
                   const owner = org.memberships.find((m) => m.role === "OWNER")?.user;
                   const start = startByOrg.get(org.id);
                   const end = endByOrg.get(org.id);
@@ -207,7 +304,7 @@ export default async function AdminPage() {
                         {end ? <span className="text-rose-600">{fmtDate(end)}</span> : "—"}
                       </td>
                       <td className={td}>
-                        {status.subscribed || org.plan === "PRO" ? (
+                        {status.subscribed || org.plan === "PRO" || org.teamPlan === "TEAM" ? (
                           <span className="font-medium text-slate-900">{yen(monthly)}</span>
                         ) : (
                           <span className="text-slate-400">—</span>
@@ -220,7 +317,17 @@ export default async function AdminPage() {
                         {org.earlyBird ? <Badge className="bg-amber-100 text-amber-800">早期3ヶ月</Badge> : "—"}
                       </td>
                       <td className={td}>
-                        {org.plan === "PRO" ? <Badge className="bg-indigo-100 text-indigo-800">PRO</Badge> : "—"}
+                        <div className="flex gap-1">
+                          {org.plan === "PRO" && (
+                            <Badge className="bg-indigo-100 text-indigo-800">
+                              {pro.stripeTrialing ? "PRO(試)" : "PRO"}
+                            </Badge>
+                          )}
+                          {org.teamPlan === "TEAM" && (
+                            <Badge className="bg-violet-100 text-violet-800">TEAM</Badge>
+                          )}
+                          {org.plan !== "PRO" && org.teamPlan !== "TEAM" && "—"}
+                        </div>
                       </td>
                       <td className={td}>
                         <div className="flex gap-1">
