@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import type { RevenueReport } from "@/lib/revenue";
 import { formatMonthShort } from "@/lib/months";
@@ -29,7 +30,10 @@ export function RevenueGrid({ report }: { report: RevenueReport }) {
   const [addingRow, setAddingRow] = useState(false);
   const [newServiceId, setNewServiceId] = useState("");
   const [newLabel, setNewLabel] = useState("");
+  const [mounted, setMounted] = useState(false);
   const [, startTransition] = useTransition();
+
+  useEffect(() => setMounted(true), []);
 
   // 経費カテゴリの編集 (追加・改名・削除) はポップアップからサーバーアクションで行われ、
   // /revenue の再検証で新しい report が渡ってくる。カテゴリ構成が変わったときだけ経費行を取り込む
@@ -361,8 +365,8 @@ export function RevenueGrid({ report }: { report: RevenueReport }) {
       </table>
     </div>
 
-    {/* 売上行を追加するポップアップ (サービスに紐づく単発売上) */}
-    {addingRow && (
+    {/* 売上行を追加するポップアップ (テーブル/overflow に閉じ込められないよう body へポータル) */}
+    {addingRow && mounted && createPortal(
       <div
         className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 sm:items-center"
         onMouseDown={(e) => e.target === e.currentTarget && setAddingRow(false)}
@@ -429,7 +433,8 @@ export function RevenueGrid({ report }: { report: RevenueReport }) {
             </button>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     )}
     </>
   );

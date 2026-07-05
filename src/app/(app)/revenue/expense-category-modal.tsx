@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import {
   createExpenseCategory,
   renameExpenseCategory,
@@ -11,7 +12,10 @@ import {
 // 追加・改名・削除に対応し、サーバーアクションが /revenue を再検証するので一覧に即反映される。
 export function ExpenseCategoryModal({ categories }: { categories: { id: string; name: string }[] }) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [, startTransition] = useTransition();
+
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (!open) return;
@@ -34,7 +38,8 @@ export function ExpenseCategoryModal({ categories }: { categories: { id: string;
         カテゴリを編集
       </button>
 
-      {open && (
+      {/* テーブル/overflow コンテナに閉じ込められてクリップされないよう body へポータルする */}
+      {open && mounted && createPortal(
         <div
           className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 sm:items-center"
           onMouseDown={(e) => e.target === e.currentTarget && setOpen(false)}
@@ -101,7 +106,8 @@ export function ExpenseCategoryModal({ categories }: { categories: { id: string;
               </button>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
