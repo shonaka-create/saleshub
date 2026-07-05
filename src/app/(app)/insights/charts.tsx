@@ -16,6 +16,7 @@ import {
 import type { ValueType, NameType } from "recharts/types/component/DefaultTooltipContent";
 import { formatMonthShort, formatMonthJa } from "@/lib/months";
 import { formatCompact, formatMoney } from "@/lib/currency";
+import { useIsMobile } from "@/components/use-is-mobile";
 
 const INK_MUTED = "#898781";
 const GRID = "#e1e0d9";
@@ -38,12 +39,13 @@ type ChartRow = Record<string, string | number>;
 
 // 売上・費用・利益 (棒2本 + 利益ライン)
 export function PnlChart({ data, baseCurrency }: { data: ChartRow[]; baseCurrency: string }) {
+  const mobile = useIsMobile();
   return (
-    <ResponsiveContainer width="100%" height={280}>
+    <ResponsiveContainer width="100%" height={mobile ? 210 : 280}>
       <ComposedChart data={data} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
         <CartesianGrid vertical={false} stroke={GRID} />
-        <XAxis dataKey="month" tickFormatter={formatMonthShort} {...axisProps} />
-        <YAxis tickFormatter={(v: number) => formatCompact(v, baseCurrency)} {...axisProps} width={70} />
+        <XAxis dataKey="month" tickFormatter={formatMonthShort} {...axisProps} interval="preserveStartEnd" minTickGap={mobile ? 16 : 5} />
+        <YAxis tickFormatter={(v: number) => formatCompact(v, baseCurrency)} {...axisProps} width={mobile ? 46 : 70} />
         <Tooltip
           formatter={(value: ValueType, name: NameType) =>
             [formatMoney(Number(value ?? 0), baseCurrency), String(name ?? "")] as [string, string]
@@ -71,23 +73,24 @@ export function PnlChart({ data, baseCurrency }: { data: ChartRow[]; baseCurrenc
 
 // MRR (棒) + 解約率% (ライン・右軸)
 export function MrrChurnChart({ data, baseCurrency }: { data: ChartRow[]; baseCurrency: string }) {
+  const mobile = useIsMobile();
   return (
-    <ResponsiveContainer width="100%" height={260}>
+    <ResponsiveContainer width="100%" height={mobile ? 200 : 260}>
       <ComposedChart data={data} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
         <CartesianGrid vertical={false} stroke={GRID} />
-        <XAxis dataKey="month" tickFormatter={formatMonthShort} {...axisProps} />
+        <XAxis dataKey="month" tickFormatter={formatMonthShort} {...axisProps} interval="preserveStartEnd" minTickGap={mobile ? 16 : 5} />
         <YAxis
           yAxisId="money"
           tickFormatter={(v: number) => formatCompact(v, baseCurrency)}
           {...axisProps}
-          width={70}
+          width={mobile ? 46 : 70}
         />
         <YAxis
           yAxisId="pct"
           orientation="right"
           tickFormatter={(v: number) => `${v}%`}
           {...axisProps}
-          width={45}
+          width={mobile ? 34 : 45}
         />
         <Tooltip
           formatter={(value: ValueType, name: NameType) => {
@@ -121,12 +124,13 @@ export function MrrChurnChart({ data, baseCurrency }: { data: ChartRow[]; baseCu
 
 // 契約数の動き (新規 / 解約 / 稼働)
 export function ContractsChart({ data }: { data: ChartRow[] }) {
+  const mobile = useIsMobile();
   return (
-    <ResponsiveContainer width="100%" height={260}>
+    <ResponsiveContainer width="100%" height={mobile ? 200 : 260}>
       <ComposedChart data={data} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
         <CartesianGrid vertical={false} stroke={GRID} />
-        <XAxis dataKey="month" tickFormatter={formatMonthShort} {...axisProps} />
-        <YAxis allowDecimals={false} {...axisProps} width={40} />
+        <XAxis dataKey="month" tickFormatter={formatMonthShort} {...axisProps} interval="preserveStartEnd" minTickGap={mobile ? 16 : 5} />
+        <YAxis allowDecimals={false} {...axisProps} width={mobile ? 28 : 40} />
         <Tooltip
           formatter={(value: ValueType, name: NameType) =>
             [`${value} 件`, String(name ?? "")] as [string, string]
@@ -162,12 +166,13 @@ export function OutsourcingChart({
   baseCurrency: string;
   limit: number | null;
 }) {
+  const mobile = useIsMobile();
   return (
-    <ResponsiveContainer width="100%" height={260}>
+    <ResponsiveContainer width="100%" height={mobile ? 200 : 260}>
       <BarChart data={data} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
         <CartesianGrid vertical={false} stroke={GRID} />
-        <XAxis dataKey="month" tickFormatter={formatMonthShort} {...axisProps} />
-        <YAxis tickFormatter={(v: number) => formatCompact(v, baseCurrency)} {...axisProps} width={70} />
+        <XAxis dataKey="month" tickFormatter={formatMonthShort} {...axisProps} interval="preserveStartEnd" minTickGap={mobile ? 16 : 5} />
+        <YAxis tickFormatter={(v: number) => formatCompact(v, baseCurrency)} {...axisProps} width={mobile ? 46 : 70} />
         <Tooltip
           formatter={(value: ValueType) =>
             [formatMoney(Number(value ?? 0), baseCurrency), "外注費"] as [string, string]

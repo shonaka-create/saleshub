@@ -16,6 +16,7 @@ import {
 import type { ValueType, NameType } from "recharts/types/component/DefaultTooltipContent";
 import { formatMonthShort, formatMonthJa } from "@/lib/months";
 import { formatCompact, formatMoney } from "@/lib/currency";
+import { useIsMobile } from "@/components/use-is-mobile";
 
 // ダッシュボード共通のチャートスタイル (recessiveなグリッド・軸、控えめなインク)
 const INK_MUTED = "#898781";
@@ -57,13 +58,14 @@ export function RevenueStackedChart({
 }) {
   const seriesNames = [...services.map((s) => s.name), ...(hasManual ? ["未分類"] : [])];
   const lastSeries = seriesNames[seriesNames.length - 1];
+  const mobile = useIsMobile();
 
   return (
-    <ResponsiveContainer width="100%" height={300}>
+    <ResponsiveContainer width="100%" height={mobile ? 220 : 300}>
       <BarChart data={data} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
         <CartesianGrid vertical={false} stroke={GRID} />
-        <XAxis dataKey="month" tickFormatter={formatMonthShort} {...axisProps} />
-        <YAxis tickFormatter={(v: number) => formatCompact(v, baseCurrency)} {...axisProps} width={70} />
+        <XAxis dataKey="month" tickFormatter={formatMonthShort} {...axisProps} interval="preserveStartEnd" minTickGap={mobile ? 16 : 5} />
+        <YAxis tickFormatter={(v: number) => formatCompact(v, baseCurrency)} {...axisProps} width={mobile ? 46 : 70} />
         <Tooltip {...moneyTooltip(baseCurrency)} cursor={{ fill: "rgba(0,0,0,0.03)" }} />
         <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, color: "#52514e" }} />
         {services.map((s) => (
@@ -95,12 +97,13 @@ export function RevenueStackedChart({
 }
 
 export function ProfitChart({ data, baseCurrency }: { data: ChartRow[]; baseCurrency: string }) {
+  const mobile = useIsMobile();
   return (
-    <ResponsiveContainer width="100%" height={260}>
+    <ResponsiveContainer width="100%" height={mobile ? 200 : 260}>
       <ComposedChart data={data} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
         <CartesianGrid vertical={false} stroke={GRID} />
-        <XAxis dataKey="month" tickFormatter={formatMonthShort} {...axisProps} />
-        <YAxis tickFormatter={(v: number) => formatCompact(v, baseCurrency)} {...axisProps} width={70} />
+        <XAxis dataKey="month" tickFormatter={formatMonthShort} {...axisProps} interval="preserveStartEnd" minTickGap={mobile ? 16 : 5} />
+        <YAxis tickFormatter={(v: number) => formatCompact(v, baseCurrency)} {...axisProps} width={mobile ? 46 : 70} />
         <Tooltip {...moneyTooltip(baseCurrency)} cursor={{ fill: "rgba(0,0,0,0.03)" }} />
         <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, color: "#52514e" }} />
         <Bar name="営業利益" dataKey="profit" fill="#2a78d6" maxBarSize={20} radius={[3, 3, 0, 0]} />
@@ -119,12 +122,13 @@ export function ProfitChart({ data, baseCurrency }: { data: ChartRow[]; baseCurr
 }
 
 export function MrrChart({ data, baseCurrency }: { data: ChartRow[]; baseCurrency: string }) {
+  const mobile = useIsMobile();
   return (
-    <ResponsiveContainer width="100%" height={260}>
+    <ResponsiveContainer width="100%" height={mobile ? 200 : 260}>
       <LineChart data={data} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
         <CartesianGrid vertical={false} stroke={GRID} />
-        <XAxis dataKey="month" tickFormatter={formatMonthShort} {...axisProps} />
-        <YAxis tickFormatter={(v: number) => formatCompact(v, baseCurrency)} {...axisProps} width={70} />
+        <XAxis dataKey="month" tickFormatter={formatMonthShort} {...axisProps} interval="preserveStartEnd" minTickGap={mobile ? 16 : 5} />
+        <YAxis tickFormatter={(v: number) => formatCompact(v, baseCurrency)} {...axisProps} width={mobile ? 46 : 70} />
         <Tooltip {...moneyTooltip(baseCurrency)} />
         <Line
           name="MRR"
@@ -147,12 +151,13 @@ export function PipelineChart({
   data: { stage: string; count: number; amount: number }[];
   baseCurrency: string;
 }) {
+  const mobile = useIsMobile();
   return (
     <ResponsiveContainer width="100%" height={180}>
-      <BarChart data={data} layout="vertical" margin={{ top: 4, right: 60, left: 8, bottom: 0 }}>
+      <BarChart data={data} layout="vertical" margin={{ top: 4, right: mobile ? 40 : 60, left: 8, bottom: 0 }}>
         <CartesianGrid horizontal={false} stroke={GRID} />
         <XAxis type="number" tickFormatter={(v: number) => formatCompact(v, baseCurrency)} {...axisProps} />
-        <YAxis type="category" dataKey="stage" {...axisProps} width={80} />
+        <YAxis type="category" dataKey="stage" {...axisProps} width={mobile ? 56 : 80} />
         <Tooltip
           formatter={(value: ValueType) =>
             [formatMoney(Number(value ?? 0), baseCurrency), "月額換算"] as [string, string]
