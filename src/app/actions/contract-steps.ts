@@ -2,18 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireSession, isAdmin } from "@/lib/auth";
+import { requireSession } from "@/lib/auth";
+import { PROCEDURE_FEATURES, PROCEDURE_FEATURE_META, type ProcedureFeature } from "@/lib/constants";
 
-async function requireAdmin() {
-  const session = await requireSession();
-  if (!isAdmin(session.role)) throw new Error("管理者権限が必要です");
-  return session;
-}
+// ===== 契約手続きテンプレート (組織共通・メンバーなら誰でもカスタマイズ可) =====
 
-// ===== 契約手続きテンプレート (組織共通) =====
-
+// 自由入力の手続きステップを追加する。
 export async function createContractStepDef(formData: FormData) {
-  const session = await requireAdmin();
+  const session = await requireSession();
   const label = String(formData.get("label") ?? "").trim();
   if (!label) return;
   const count = await db.contractStepDef.count({ where: { orgId: session.org.id } });
@@ -23,8 +19,25 @@ export async function createContractStepDef(formData: FormData) {
   revalidatePath("/contracts/steps");
 }
 
+// 定型プロセス (請求書/契約書/委託費管理) を手続きステップとして追加する。
+// 同じ定型プロセスは重複して追加できない。
+export async function addProcedureFeatureStep(feature: ProcedureFeature) {
+  const session = await requireSession();
+  if (!PROCEDURE_FEATURES.includes(feature)) return;
+  const orgId = session.org.id;
+
+  const already = await db.contractStepDef.findFirst({ where: { orgId, feature } });
+  if (already) return;
+
+  const count = await db.contractStepDef.count({ where: { orgId } });
+  await db.contractStepDef.create({
+    data: { orgId, label: PROCEDURE_FEATURE_META[feature].label, sortOrder: count, feature },
+  });
+  revalidatePath("/contracts/steps");
+}
+
 export async function deleteContractStepDef(id: string) {
-  const session = await requireAdmin();
+  const session = await requireSession();
   await db.contractStepDef.deleteMany({ where: { id, orgId: session.org.id } });
   revalidatePath("/contracts/steps");
 }

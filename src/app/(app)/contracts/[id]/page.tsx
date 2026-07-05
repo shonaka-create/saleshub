@@ -84,6 +84,7 @@ export default async function ContractDetailPage({ params }: { params: Promise<{
                       stepDefId={s.stepDefId}
                       label={s.label}
                       completedAt={s.completedAt}
+                      feature={s.feature}
                     />
                   ))}
                 </div>

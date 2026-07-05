@@ -13,7 +13,8 @@ const links = [
   // Pro プラン — 旧「ダッシュボード」+「経営分析」は /dashboard (経営数値分析) に統合済み
   { href: "/dashboard", label: "経営数値分析", icon: "📈", pro: true },
   { href: "/templates", label: "テンプレート", icon: "📁", pro: true },
-  // TEAM プラン — 請求書・契約書・委託費管理を一連のワークフローとしてまとめて提供 (Coming Soon)
+  // TEAM プラン — タスク管理・アサイン管理・WBS を提供 (Coming Soon)。
+  // 請求書・契約書・委託費は契約管理の手続きテンプレート (/contracts/steps) に統合済み。
   { href: "/team", label: "チーム機能", icon: "🤝", team: true },
   // 壁打ちCOO (MAX プラン) は一旦非表示 (2026-07-04)。ページ自体 (/advisor) は残しているので
   // 再公開する際はここに { href: "/advisor", label: "壁打ちCOO", icon: "🧑‍💼", maxPro: true } を戻す

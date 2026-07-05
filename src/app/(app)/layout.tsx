@@ -46,7 +46,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="flex min-h-screen">
       <aside className="fixed inset-y-0 left-0 z-20 flex w-60 flex-col border-r border-slate-200 bg-white">
         <div className="border-b border-slate-100 px-5 py-4">
-          <Link href="/dashboard" className="text-lg font-bold tracking-tight text-akane-700">
+          <Link href="/customers" className="text-lg font-bold tracking-tight text-akane-700">
             Saleshub
           </Link>
           <OrgSwitcher

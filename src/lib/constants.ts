@@ -84,6 +84,34 @@ export const CUSTOM_FIELD_TYPE_LABELS: Record<string, string> = {
   select: "選択式",
 };
 
+// 契約手続きテンプレートで選べる定型プロセス。チーム機能 (近日公開) と連動し、
+// 手続きステップとして追加すると契約のチェックリストから該当機能へ導線を出す。
+export const PROCEDURE_FEATURES = ["contract-doc", "invoice", "outsourcing-cost"] as const;
+export type ProcedureFeature = (typeof PROCEDURE_FEATURES)[number];
+export const PROCEDURE_FEATURE_META: Record<
+  ProcedureFeature,
+  { label: string; icon: string; href: string; description: string }
+> = {
+  "contract-doc": {
+    label: "契約書管理",
+    icon: "📄",
+    href: "/team/contract-docs",
+    description: "契約書ファイルの保管・締結状況の管理",
+  },
+  invoice: {
+    label: "請求書管理",
+    icon: "🧾",
+    href: "/team/invoices",
+    description: "契約・売上データと連動した請求書の作成と入金ステータス管理",
+  },
+  "outsourcing-cost": {
+    label: "委託費管理",
+    icon: "💸",
+    href: "/team/outsourcing-costs",
+    description: "外注先・委託先への支払いを案件ごとに管理",
+  },
+};
+
 export const TEMPLATE_CATEGORIES = ["PROPOSAL", "QUOTE", "CONTRACT", "INVOICE", "REPORT", "OTHER"] as const;
 export const TEMPLATE_CATEGORY_LABELS: Record<string, string> = {
   PROPOSAL: "提案書",

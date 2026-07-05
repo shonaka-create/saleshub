@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/currency";
+import { monthKey, currentMonthKey, formatMonthJa } from "@/lib/months";
 import { PageHeader, Card, Badge, EmptyState, PrimaryLink, btnSecondary, selectCls } from "@/components/ui";
 import { ContractsTabs } from "./tabs";
 
@@ -42,6 +43,14 @@ export default async function ContractsPage({
   // 稼働契約の月額合計 (月次経常収益)
   const mrr = activeContracts.reduce((sum, c) => sum + c.monthlyFee, 0);
 
+  // 今月の売上: 稼働契約の月額 + 今月開始した契約の初期費用
+  const thisMonth = currentMonthKey();
+  const thisMonthSales = activeContracts.reduce((sum, c) => {
+    let amount = c.monthlyFee;
+    if (monthKey(c.startDate) === thisMonth) amount += c.initialFee;
+    return sum + amount;
+  }, 0);
+
   return (
     <>
       <PageHeader
@@ -60,10 +69,20 @@ export default async function ContractsPage({
           </p>
         </Card>
         <Card className="p-5 sm:col-span-2">
-          <p className="text-xs font-medium text-slate-400">月次経常収益 (稼働契約の月額合計)</p>
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="text-xs font-medium text-slate-400">
+              今月の売上（{formatMonthJa(thisMonth)}）
+            </p>
+            {activeContracts.length > 0 && (
+              <p className="text-xs text-slate-400">
+                月次経常収益 {formatMoney(mrr, session.org.baseCurrency)}
+              </p>
+            )}
+          </div>
           <p className="mt-1 text-2xl font-bold text-slate-900">
-            {activeContracts.length === 0 ? "—" : formatMoney(mrr, session.org.baseCurrency)}
+            {activeContracts.length === 0 ? "—" : formatMoney(thisMonthSales, session.org.baseCurrency)}
           </p>
+          <p className="mt-1 text-xs text-slate-400">稼働契約の月額 ＋ 今月開始した契約の初期費用</p>
         </Card>
       </div>
 

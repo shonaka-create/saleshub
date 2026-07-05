@@ -6,6 +6,7 @@ export type ContractStepView = {
   label: string;
   sortOrder: number;
   completedAt: Date | null;
+  feature: string | null; // 定型プロセス種別 (constants.ts PROCEDURE_FEATURES)。null は自由入力ステップ。
 };
 
 // 組織共通の手続きテンプレートと、当該契約の完了状況をマージして返す。
@@ -37,5 +38,6 @@ export async function getContractSteps(orgId: string, contractId: string): Promi
     label: d.label,
     sortOrder: d.sortOrder,
     completedAt: byDefId.get(d.id)?.completedAt ?? null,
+    feature: d.feature,
   }));
 }
