@@ -145,7 +145,7 @@ export default async function CustomerDetailPage({
             {customer.memo && (
               <div className="mt-4 border-t border-slate-100 pt-4">
                 <dt className="text-xs text-slate-500">メモ</dt>
-                <dd className="whitespace-pre-wrap text-sm text-slate-800">{customer.memo}</dd>
+                <dd className="whitespace-pre-wrap break-words text-sm text-slate-800">{customer.memo}</dd>
               </div>
             )}
             {defs.length > 0 && (

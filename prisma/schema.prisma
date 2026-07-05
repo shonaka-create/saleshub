@@ -47,6 +47,10 @@ model Organization {
   customFieldDefs   CustomFieldDef[]
   templates         Template[]
   contractStepDefs  ContractStepDef[]
+  contractDocs      ContractDoc[]
+  invoices          Invoice[]
+  subcontractors    Subcontractor[]
+  outsourcingWorks  OutsourcingWork[]
 }
 
 // 認証は Supabase Auth。id は auth.users.id (UUID) と一致させ、ここはプロフィール情報のみ持つ。
@@ -171,11 +175,13 @@ model Customer {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  org        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  contacts   Contact[]
-  deals      Deal[]
-  contracts  Contract[]
-  activities Activity[]
+  org          Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  contacts     Contact[]
+  deals        Deal[]
+  contracts    Contract[]
+  activities   Activity[]
+  contractDocs ContractDoc[]
+  invoices     Invoice[]
 }
 
 model Contact {
@@ -257,9 +263,11 @@ model Contract {
   org      Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   customer Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
   deal     Deal?        @relation(fields: [dealId], references: [id], onDelete: SetNull)
-  service  Service      @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  plan     Plan?        @relation(fields: [planId], references: [id], onDelete: SetNull)
-  steps    ContractStep[]
+  service          Service           @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  plan             Plan?             @relation(fields: [planId], references: [id], onDelete: SetNull)
+  steps            ContractStep[]
+  contractDocs     ContractDoc[]
+  outsourcingWorks OutsourcingWork[]
 }
 
 // ===== 契約手続きワークフロー (組織共通のチェックリストテンプレート) =====
@@ -338,6 +346,100 @@ model CustomFieldDef {
   org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@unique([orgId, entity, key])
+}
+
+// ===== 契約書管理 (チーム機能) =====
+// 論点: ①契約書を回せているか (送付/回付) ②同意を得ているか (締結) ③保管できているか
+// 3つのチェックポイントを日付で持ち、締結・保管まで漏れなく回せているかを一覧で追えるようにする。
+model ContractDoc {
+  id           String    @id @default(cuid())
+  orgId        String
+  customerId   String? // 紐付け顧客 (任意)
+  contractId   String? // 紐付け契約 (任意)
+  title        String
+  counterparty String    @default("") // 相手方 (顧客名など)
+  sentAt       DateTime? // ① 契約書を送付・回付した日
+  agreedAt     DateTime? // ② 相手方の同意 (署名・締結) を得た日
+  storedAt     DateTime? // ③ 保管 (原本・PDF 格納) を完了した日
+  fileName     String? // 保管ファイル名 (任意メモ)
+  fileUrl      String? // 保管先URL (Drive等・任意)
+  memo         String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  org      Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  customer Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  contract Contract?    @relation(fields: [contractId], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
+}
+
+// ===== 請求書管理 (チーム機能) =====
+// 論点: 受領/送付・必要項目・締切日への同意・締切日までの入金/支払い。
+// direction で「発行(送付し入金を受ける)」と「受領(受け取り支払う)」を区別し、日付の意味を切り替える。
+model Invoice {
+  id             String    @id @default(cuid())
+  orgId          String
+  direction      String    @default("ISSUED") // ISSUED(発行/送付) | RECEIVED(受領)
+  customerId     String? // 紐付け顧客 (発行時。任意)
+  counterparty   String    @default("") // 取引先名 (発行=顧客 / 受領=委託先・仕入先)
+  invoiceNo      String? // 請求書番号
+  amount         Float     @default(0) // 税込金額
+  taxRate        Float     @default(10)
+  registrationNo String? // インボイス登録番号 (T+13桁)
+  itemsComplete  Boolean   @default(false) // 必要項目 (登録番号・税率別金額・支払先等) を満たしているか
+  issueDate      DateTime? // 請求日
+  dueDate        DateTime? // 支払期限 (締切日)
+  dueDateAgreed  Boolean   @default(false) // 締切日に双方が同意しているか
+  deliveredAt    DateTime? // 発行=送付日 / 受領=受領日
+  settledAt      DateTime? // 発行=入金日 / 受領=支払日
+  memo           String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  org      Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  customer Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
+}
+
+// ===== 委託費管理 (チーム機能) =====
+// 論点: ①委託先の稼働を可視化 ②だれがいつ何を実施したか ③稼働を自社の費用として勘定できているか
+model Subcontractor {
+  id        String   @id @default(cuid())
+  orgId     String
+  name      String // 委託先名 (会社/個人)
+  role      String? // 役割・職種 (デザイナー / エンジニア等)
+  contact   String? // 連絡先
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  org   Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  works OutsourcingWork[]
+
+  @@index([orgId])
+}
+
+// 委託先の稼働ログ。1行 = 「だれが・いつ・何を・いくら」。countedMonth で費用計上済みかを持つ。
+model OutsourcingWork {
+  id              String    @id @default(cuid())
+  orgId           String
+  subcontractorId String
+  workedOn        DateTime // いつ
+  performer       String    @default("") // だれが (委託先内の担当者名。空なら委託先名を使う)
+  task            String // 何を実施したか
+  hours           Float? // 稼働時間 (任意)
+  amount          Float     @default(0) // 委託費 (費用計上額)
+  contractId      String? // 紐付け契約 (任意)
+  countedMonth    String? // 費用として勘定した月 (YYYY-MM)。null は未計上。
+  memo            String?
+  createdAt       DateTime  @default(now())
+
+  org           Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  subcontractor Subcontractor @relation(fields: [subcontractorId], references: [id], onDelete: Cascade)
+  contract      Contract?     @relation(fields: [contractId], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
 }
 
 // ===== テンプレートライブラリ (Word/PPT/Excel/PDF 等のファイル保管庫) =====

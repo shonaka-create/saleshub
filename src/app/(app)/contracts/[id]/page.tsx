@@ -159,7 +159,7 @@ export default async function ContractDetailPage({ params }: { params: Promise<{
             {contract.memo && (
               <div className="mt-6 border-t border-slate-100 pt-4">
                 <p className="mb-1 text-xs font-semibold text-slate-500">メモ</p>
-                <p className="whitespace-pre-wrap text-sm text-slate-700">{contract.memo}</p>
+                <p className="whitespace-pre-wrap break-words text-sm text-slate-700">{contract.memo}</p>
               </div>
             )}
           </Card>
@@ -167,20 +167,17 @@ export default async function ContractDetailPage({ params }: { params: Promise<{
           <Card className="p-6">
             <h2 className="mb-1 text-sm font-semibold text-slate-700">次のステップ</h2>
             <p className="mb-4 text-xs text-slate-400">
-              契約後の書類・経費まわりは「チーム機能」でまとめて管理できます (近日公開)
+              契約後の書類・経費まわりは「チーム機能」でまとめて管理できます
             </p>
             <div className="flex flex-wrap gap-2">
-              <Link
-                href="/team/contract-docs"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-500 transition hover:bg-slate-100"
-              >
-                📄 契約書を発行 <Badge className="bg-slate-200 text-slate-500">近日</Badge>
+              <Link href="/team/contract-docs" className={btnSecondary}>
+                📄 契約書管理
               </Link>
-              <Link
-                href="/team/invoices"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-500 transition hover:bg-slate-100"
-              >
-                🧾 請求書を発行 <Badge className="bg-slate-200 text-slate-500">近日</Badge>
+              <Link href="/team/invoices" className={btnSecondary}>
+                🧾 請求書管理
+              </Link>
+              <Link href="/team/outsourcing-costs" className={btnSecondary}>
+                💸 委託費管理
               </Link>
             </div>
           </Card>

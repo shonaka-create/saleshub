@@ -10,7 +10,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const ADMIN_EMAIL = "nakaebisu.shotaro1543@gmail.com";
 const ADMIN_PASSWORD = "1543baske";
-const ADMIN_NAME = "中戎 翔太郎";
+const ADMIN_NAME = "中胡 翔太郎";
 const ADMIN_ORG_NAME = "AKANE WEB STUDIO (運営)";
 
 const db = new PrismaClient({ datasourceUrl: process.env.DATABASE_URL_ADMIN });
@@ -59,7 +59,7 @@ async function main() {
       isSystemAdmin: true,
       termsAcceptedAt: new Date(),
     },
-    update: { isSystemAdmin: true },
+    update: { isSystemAdmin: true, name: ADMIN_NAME },
   });
   console.log("User.isSystemAdmin = true を設定しました");
 

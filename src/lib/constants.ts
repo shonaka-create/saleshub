@@ -112,6 +112,35 @@ export const PROCEDURE_FEATURE_META: Record<
   },
 };
 
+// ===== 契約書管理 =====
+// 3つのチェックポイント (送付 → 締結 → 保管) の到達状況からステータスを導く。
+export const CONTRACT_DOC_STAGES = ["DRAFT", "SENT", "AGREED", "STORED"] as const;
+export const CONTRACT_DOC_STAGE_LABELS: Record<string, string> = {
+  DRAFT: "未送付",
+  SENT: "回付中", // 送付済・締結待ち
+  AGREED: "締結済", // 同意取得・保管待ち
+  STORED: "保管完了",
+};
+export const CONTRACT_DOC_STAGE_COLORS: Record<string, string> = {
+  DRAFT: "bg-slate-100 text-slate-600",
+  SENT: "bg-amber-100 text-amber-800",
+  AGREED: "bg-sky-100 text-sky-800",
+  STORED: "bg-emerald-100 text-emerald-800",
+};
+
+// ===== 請求書管理 =====
+export const INVOICE_DIRECTIONS = ["ISSUED", "RECEIVED"] as const;
+export type InvoiceDirection = (typeof INVOICE_DIRECTIONS)[number];
+export const INVOICE_DIRECTION_LABELS: Record<string, string> = {
+  ISSUED: "発行 (自社→取引先)",
+  RECEIVED: "受領 (取引先→自社)",
+};
+// direction ごとに「引き渡し」「決済」の意味が変わるためラベルを切り替える。
+export const INVOICE_FIELD_LABELS: Record<InvoiceDirection, { delivered: string; settled: string }> = {
+  ISSUED: { delivered: "送付", settled: "入金" },
+  RECEIVED: { delivered: "受領", settled: "支払" },
+};
+
 export const TEMPLATE_CATEGORIES = ["PROPOSAL", "QUOTE", "CONTRACT", "INVOICE", "REPORT", "OTHER"] as const;
 export const TEMPLATE_CATEGORY_LABELS: Record<string, string> = {
   PROPOSAL: "提案書",

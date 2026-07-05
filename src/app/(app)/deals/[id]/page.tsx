@@ -210,7 +210,7 @@ export default async function DealDetailPage({
             {deal.memo && (
               <div className="mt-6 border-t border-slate-100 pt-4">
                 <p className="mb-1 text-xs font-semibold text-slate-500">メモ</p>
-                <p className="whitespace-pre-wrap text-sm text-slate-700">{deal.memo}</p>
+                <p className="whitespace-pre-wrap break-words text-sm text-slate-700">{deal.memo}</p>
               </div>
             )}
           </Card>

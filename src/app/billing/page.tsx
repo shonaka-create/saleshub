@@ -217,7 +217,15 @@ export default async function BillingPage({
               <p className="mt-1 text-xs text-slate-400">初月無料</p>
             )}
             <ul className="mt-5 space-y-2 text-sm text-slate-700">
-              {["顧客管理", "案件管理", "契約管理", "売上管理"].map((f) => (
+              {[
+                "顧客管理",
+                "案件管理",
+                "契約管理",
+                "売上管理",
+                "契約書管理（送付・締結・保管の追跡）",
+                "請求書管理（発行・受領／入金・支払）",
+                "委託費管理（委託先の稼働・費用計上）",
+              ].map((f) => (
                 <li key={f} className="flex items-start gap-2">
                   <span className="text-emerald-600">✓</span>
                   {f}
@@ -260,10 +268,10 @@ export default async function BillingPage({
             <p className="text-xs text-slate-400">Pro プランのすべて + 以下</p>
             <ul className="mt-5 space-y-2 text-sm text-slate-700">
               {[
-                "請求書管理 (契約・売上と連動した発行・入金管理)",
-                "契約書管理 (契約書ファイルの保管・締結状況管理)",
-                "委託費管理 (外注先・委託先への支払い管理)",
-                "タスク管理・WBSなど、今後順次追加予定",
+                "タスク管理（担当割り当て・進捗共有）",
+                "アサイン管理（メンバーの稼働状況を可視化）",
+                "WBS（案件を工程単位に分解して進捗管理）",
+                "チーム版 壁打ちCOO など、今後順次追加予定",
               ].map((f) => (
                 <li key={f} className="flex items-start gap-2">
                   <span className="text-indigo-500">◆</span>

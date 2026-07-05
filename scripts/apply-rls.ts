@@ -31,6 +31,10 @@ const ORG_TABLES = [
   "CustomFieldDef",
   "Template",
   "ContractStepDef",
+  "ContractDoc",
+  "Invoice",
+  "Subcontractor",
+  "OutsourcingWork",
 ];
 
 // 親テーブル経由で分離される子テーブル: [テーブル, 親参照カラム, 親テーブル]

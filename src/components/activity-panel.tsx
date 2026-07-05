@@ -84,7 +84,7 @@ export function ActivityPanel({
                   </button>
                 </form>
               </div>
-              <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">{a.content}</p>
+              <p className="mt-1 whitespace-pre-wrap break-words text-sm text-slate-700">{a.content}</p>
             </li>
           ))}
         </ul>
