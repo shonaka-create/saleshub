@@ -1,22 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { cancelBasePlan } from "@/app/actions/base-billing";
+import { cancelPlan } from "@/app/actions/base-billing";
+
+export type CancelTarget = { value: "BASE" | "PRO"; title: string; description: string };
 
 // 解約アンケートをポップアップ (モーダル) で表示する。
 // タブ本体には要約と「解約する」ボタンだけを置き、押すとこのダイアログが開く。
-// 送信先はサーバーアクション cancelBasePlan (構造化保存 + Stripe キャンセル)。
-// 必須項目 (理由・確認チェック) はブラウザのネイティブ検証で担保する。
+// 解約対象 (基本プラン / Pro プラン) を選び、サーバーアクション cancelPlan に target を渡す。
+// 必須項目 (対象・理由・確認チェック) はブラウザのネイティブ検証で担保する。
 
 export function CancelDialog({
   reasons,
   improvements,
+  targets,
 }: {
   reasons: string[];
   improvements: string[];
+  targets: CancelTarget[];
 }) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [target, setTarget] = useState<string>(targets[0]?.value ?? "BASE");
 
   // モーダル表示中は背面スクロールを止め、Esc で閉じられるようにする
   useEffect(() => {
@@ -64,10 +69,44 @@ export function CancelDialog({
             </div>
 
             <form
-              action={cancelBasePlan}
+              action={cancelPlan}
               onSubmit={() => setSubmitting(true)}
               className="space-y-6 px-6 py-5"
             >
+              {/* 解約する対象 (基本 / Pro)。1つしかない場合は hidden で固定 */}
+              {targets.length > 1 ? (
+                <fieldset>
+                  <legend className="text-sm font-medium text-slate-700">解約する対象を選んでください</legend>
+                  <div className="mt-2 space-y-2">
+                    {targets.map((t) => (
+                      <label
+                        key={t.value}
+                        className={`flex cursor-pointer items-start gap-2 rounded-lg border px-3 py-2.5 text-sm transition ${
+                          target === t.value
+                            ? "border-akane-400 bg-akane-50"
+                            : "border-slate-200 hover:bg-slate-50"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="target"
+                          value={t.value}
+                          checked={target === t.value}
+                          onChange={(e) => setTarget(e.target.value)}
+                          className="mt-0.5 accent-akane-600"
+                        />
+                        <span>
+                          <span className="font-medium text-slate-800">{t.title}</span>
+                          <span className="mt-0.5 block text-xs text-slate-500">{t.description}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              ) : (
+                <input type="hidden" name="target" value={target} />
+              )}
+
               {/* 解約理由 (単一選択・必須) */}
               <fieldset>
                 <legend className="text-sm font-medium text-slate-700">
@@ -111,12 +150,13 @@ export function CancelDialog({
                 />
               </div>
 
-              {/* 確認 (必須) */}
+              {/* 確認 (必須)。対象に応じて注意文を切り替える */}
               <label className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-3 text-sm text-rose-800">
                 <input type="checkbox" name="confirm" value="on" required className="mt-0.5 h-4 w-4 accent-rose-600" />
                 <span>
-                  解約すると以降の課金は停止し、無料期間の残りに関わらずシステムのご利用ができなくなることを理解しました
-                  (データは保存され、再登録で復帰できます)。
+                  {target === "PRO"
+                    ? "解約すると以降 Pro プランの課金は停止し、経営数値分析・テンプレートが使えなくなることを理解しました (基本プランは継続します)。"
+                    : "解約すると以降の課金は停止し、無料期間の残りに関わらず Saleshub 全体のご利用ができなくなることを理解しました (データは保存され、再登録で復帰できます)。"}
                 </span>
               </label>
 

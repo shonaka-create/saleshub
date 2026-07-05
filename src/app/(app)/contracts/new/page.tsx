@@ -46,6 +46,7 @@ export default async function NewContractPage({
     customerId: deal?.customerId ?? "",
     serviceId: deal?.serviceId ?? "",
     planId: deal?.planId ?? "",
+    billingCycle: "MONTHLY",
     initialFee: deal?.initialFee ?? 0,
     monthlyFee: deal?.monthlyFee ?? 0,
     startDate: todayInput(),

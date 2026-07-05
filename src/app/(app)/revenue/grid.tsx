@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import type { RevenueReport } from "@/lib/revenue";
 import { formatMonthShort } from "@/lib/months";
 import { saveOverride, saveManual, saveExpense, deleteManualRow } from "@/app/actions/revenue";
+import { ExpenseCategoryModal } from "./expense-category-modal";
 
 type CellTarget =
   | { kind: "service"; serviceId: string; month: string }
@@ -30,7 +31,19 @@ export function RevenueGrid({ report }: { report: RevenueReport }) {
   const [newLabel, setNewLabel] = useState("");
   const [, startTransition] = useTransition();
 
+  // 経費カテゴリの編集 (追加・改名・削除) はポップアップからサーバーアクションで行われ、
+  // /revenue の再検証で新しい report が渡ってくる。カテゴリ構成が変わったときだけ経費行を取り込む
+  // (値のみの編集では発火しないので、入力中の他行やセルの状態を壊さない)。
+  const categorySig = report.expenseRows.map((r) => `${r.categoryId}:${r.name}`).join("|");
+  useEffect(() => {
+    setState((prev) => ({ ...prev, expenseRows: report.expenseRows }));
+    // report は categorySig 経由で参照しているため依存に含めない
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categorySig]);
+
   const { months } = state;
+  // ポップアップには常に最新 (サーバー) のカテゴリ一覧を渡す。
+  const expenseCategories = report.expenseRows.map((r) => ({ id: r.categoryId, name: r.name }));
 
   // --- 集計 (ローカル状態から再計算して編集を即時反映) ---
   const revenueTotal: Record<string, number> = {};
@@ -173,6 +186,7 @@ export function RevenueGrid({ report }: { report: RevenueReport }) {
   const sectionRow = "bg-slate-100 text-slate-600";
 
   return (
+    <>
     <div className="overflow-x-auto">
       <table className="w-full min-w-max border-collapse">
         <thead>
@@ -247,64 +261,23 @@ export function RevenueGrid({ report }: { report: RevenueReport }) {
               </td>
             </tr>
           ))}
-          {addingRow ? (
-            <tr className="border-b border-slate-200 bg-akane-50/30">
-              <td className={th} colSpan={months.length + 3}>
-                <div className="flex flex-wrap items-center gap-2 py-1">
-                  <select
-                    value={newServiceId}
-                    onChange={(e) => setNewServiceId(e.target.value)}
-                    className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm"
-                  >
-                    {state.serviceRows.map((s) => (
-                      <option key={s.serviceId} value={s.serviceId}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="text"
-                    value={newLabel}
-                    onChange={(e) => setNewLabel(e.target.value)}
-                    placeholder="内容 (任意・例: スポット案件)"
-                    className="w-56 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={confirmAddRow}
-                    className="rounded-lg bg-akane-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-akane-700"
-                  >
-                    追加
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAddingRow(false)}
-                    className="text-sm text-slate-500 hover:underline"
-                  >
-                    キャンセル
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ) : (
-            <tr className="border-b border-slate-200 bg-white">
-              <td className={`${th} text-slate-500`} colSpan={months.length + 3}>
-                {state.serviceRows.length > 0 ? (
-                  <button type="button" onClick={beginAddRow} className="text-sm font-medium text-akane-600 hover:underline">
-                    ＋ 行を追加 (サービスに紐づく単発売上)
-                  </button>
-                ) : (
-                  <span className="text-sm text-slate-400">
-                    単発売上を追加するには、先に
-                    <Link href="/revenue/services" className="text-akane-600 hover:underline">
-                      「サービス・プラン」
-                    </Link>
-                    でサービスを登録してください
-                  </span>
-                )}
-              </td>
-            </tr>
-          )}
+          <tr className="border-b border-slate-200 bg-white">
+            <td className={`${th} text-slate-500`} colSpan={months.length + 3}>
+              {state.serviceRows.length > 0 ? (
+                <button type="button" onClick={beginAddRow} className="text-sm font-medium text-akane-600 hover:underline">
+                  ＋ 売上行を追加 (サービスに紐づく単発売上)
+                </button>
+              ) : (
+                <span className="text-sm text-slate-400">
+                  単発売上を追加するには、先に左メニューの
+                  <Link href="/services" className="text-akane-600 hover:underline">
+                    「サービス・プラン」
+                  </Link>
+                  でサービスを登録してください
+                </span>
+              )}
+            </td>
+          </tr>
           <tr className="border-b-2 border-slate-300 bg-akane-50/50 font-semibold">
             <td className={th}>売上高合計</td>
             {months.map((m) => (
@@ -319,7 +292,10 @@ export function RevenueGrid({ report }: { report: RevenueReport }) {
           {/* ===== 経費 ===== */}
           <tr className={sectionRow}>
             <td className={th} colSpan={months.length + 3}>
-              【経費】
+              <div className="flex items-center justify-between gap-2">
+                <span>【経費】</span>
+                <ExpenseCategoryModal categories={expenseCategories} />
+              </div>
             </td>
           </tr>
           {state.expenseRows.map((row) => (
@@ -384,5 +360,77 @@ export function RevenueGrid({ report }: { report: RevenueReport }) {
         </tbody>
       </table>
     </div>
+
+    {/* 売上行を追加するポップアップ (サービスに紐づく単発売上) */}
+    {addingRow && (
+      <div
+        className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 sm:items-center"
+        onMouseDown={(e) => e.target === e.currentTarget && setAddingRow(false)}
+      >
+        <div className="my-8 w-full max-w-md rounded-2xl bg-white shadow-xl">
+          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+            <h3 className="text-base font-semibold text-slate-900">売上行を追加</h3>
+            <button
+              type="button"
+              onClick={() => setAddingRow(false)}
+              aria-label="閉じる"
+              className="-mr-1 rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="space-y-3 px-5 py-4">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-500">サービス</label>
+              <select
+                value={newServiceId}
+                onChange={(e) => setNewServiceId(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm"
+              >
+                {state.serviceRows.map((s) => (
+                  <option key={s.serviceId} value={s.serviceId}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-500">内容 (任意)</label>
+              <input
+                type="text"
+                value={newLabel}
+                onChange={(e) => setNewLabel(e.target.value)}
+                placeholder="例: スポット案件"
+                className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm"
+              />
+            </div>
+            <p className="text-xs text-slate-400">
+              追加後、月ごとのセルをクリックして金額を入力できます。サービス自体を増やす場合は{" "}
+              <Link href="/services" className="text-akane-600 hover:underline">
+                サービス・プラン
+              </Link>
+              から。
+            </p>
+          </div>
+          <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-5 py-4">
+            <button
+              type="button"
+              onClick={() => setAddingRow(false)}
+              className="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            >
+              キャンセル
+            </button>
+            <button
+              type="button"
+              onClick={confirmAddRow}
+              className="rounded-lg bg-akane-600 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-akane-700"
+            >
+              追加する
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

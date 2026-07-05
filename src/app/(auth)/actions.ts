@@ -91,6 +91,9 @@ export async function register(_prev: AuthState, formData: FormData): Promise<Au
 export async function login(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
+  // 招待リンク経由のログインでは戻り先 (招待受諾ページ) を next で受け取る。相対パスのみ許可。
+  const nextRaw = String(formData.get("next") ?? "");
+  const next = nextRaw.startsWith("/") && !nextRaw.startsWith("//") ? nextRaw : "";
 
   const signInError = await signIn(email, password);
   if (signInError) {
@@ -105,11 +108,13 @@ export async function login(_prev: AuthState, formData: FormData): Promise<AuthS
     ? await dbAdmin.membership.findFirst({ where: { userId: user.id }, orderBy: { id: "asc" } })
     : null;
   if (!membership) {
+    // 所属組織がなくても、招待リンクへ戻れば受諾して組織に参加できる。
+    if (next.startsWith("/invite/")) redirect(next);
     await supabase.auth.signOut();
     return { error: "所属する組織がありません" };
   }
   await setCurrentOrgCookie(membership.orgId);
-  redirect("/dashboard");
+  redirect(next || "/dashboard");
 }
 
 export async function logout() {
@@ -162,9 +167,16 @@ export async function acceptInvite(_prev: AuthState, formData: FormData): Promis
     if (!name || password.length < 8) {
       return { error: "名前とパスワード (8文字以上) を入力してください" };
     }
+    if (formData.get("agree") !== "on") {
+      return { error: "利用規約・個人情報保護方針・課金の仕組みへの同意が必要です" };
+    }
     const created = await createAuthUser(invite.email, password, name);
     if ("error" in created) return created;
     userId = created.userId;
+    // 規約同意の記録 (新規登録と同様に証跡として残す)
+    await dbAdmin.user
+      .update({ where: { id: userId }, data: { termsAcceptedAt: new Date() } })
+      .catch(() => {});
     const signInError = await signIn(invite.email, password);
     if (signInError) {
       return { error: "アカウントは作成されました。ログイン画面からログインしてください" };

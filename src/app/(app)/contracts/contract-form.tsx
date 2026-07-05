@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import { btnPrimary, btnSecondary, inputCls, labelCls, selectCls } from "@/components/ui";
+import { BILLING_CYCLES, BILLING_CYCLE_LABELS } from "@/lib/constants";
 import type { ContractFormState } from "@/app/actions/contracts";
 
 export type CustomerOpt = { id: string; name: string };
@@ -22,6 +23,7 @@ export type ContractFormValues = {
   customerId: string;
   serviceId: string;
   planId: string;
+  billingCycle: string; // MONTHLY | WEEKLY | ONE_TIME
   initialFee: number;
   monthlyFee: number;
   startDate: string; // yyyy-MM-dd
@@ -53,10 +55,21 @@ export function ContractForm({
 
   const [serviceId, setServiceId] = useState(initial.serviceId);
   const [planId, setPlanId] = useState(initial.planId);
+  const [billingCycle, setBillingCycle] = useState(initial.billingCycle || "MONTHLY");
   const [initialFee, setInitialFee] = useState(String(initial.initialFee));
   const [monthlyFee, setMonthlyFee] = useState(String(initial.monthlyFee));
 
   const servicePlans = plans.filter((p) => p.serviceId === serviceId);
+
+  // 頻度に応じて「本体額」欄のラベルと補足を切り替える。
+  const feeLabel =
+    billingCycle === "WEEKLY" ? "週額 (毎週計上)" : billingCycle === "ONE_TIME" ? "金額 (開始月に一度)" : "月額 (毎月計上)";
+  const feeHint =
+    billingCycle === "WEEKLY"
+      ? "売上は月換算 (×4.33) で自動計上されます"
+      : billingCycle === "ONE_TIME"
+        ? "開始月に一度だけ計上されます (継続課金なし)"
+        : "開始月〜終了月に毎月計上されます";
 
   function onServiceChange(id: string) {
     setServiceId(id);
@@ -140,6 +153,22 @@ export function ContractForm({
         </select>
       </div>
 
+      <div>
+        <label className={labelCls}>課金頻度</label>
+        <select
+          name="billingCycle"
+          value={billingCycle}
+          onChange={(e) => setBillingCycle(e.target.value)}
+          className={`${selectCls} w-full`}
+        >
+          {BILLING_CYCLES.map((c) => (
+            <option key={c} value={c}>
+              {BILLING_CYCLE_LABELS[c]}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div className="grid gap-5 sm:grid-cols-2">
         <div>
           <label className={labelCls}>初期費用 (開始月に計上)</label>
@@ -154,7 +183,7 @@ export function ContractForm({
           />
         </div>
         <div>
-          <label className={labelCls}>月額 (毎月計上)</label>
+          <label className={labelCls}>{feeLabel}</label>
           <input
             name="monthlyFee"
             type="number"
@@ -164,6 +193,7 @@ export function ContractForm({
             onChange={(e) => setMonthlyFee(e.target.value)}
             className={inputCls}
           />
+          <p className="mt-1 text-xs text-slate-400">{feeHint}</p>
         </div>
       </div>
 

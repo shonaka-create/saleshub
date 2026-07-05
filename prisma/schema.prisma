@@ -256,11 +256,12 @@ model Contract {
   dealId     String?
   serviceId  String
   planId     String?
-  name       String
-  initialFee Float     @default(0) // 開始月に計上
-  monthlyFee Float     @default(0) // 開始月〜終了月に毎月計上
-  startDate  DateTime
-  endDate    DateTime? // null = 継続中
+  name         String
+  billingCycle String   @default("MONTHLY") // MONTHLY (毎月) | WEEKLY (各週・月換算×4.33) | ONE_TIME (単月・開始月に一度)
+  initialFee   Float    @default(0) // 開始月に計上
+  monthlyFee   Float    @default(0) // MONTHLY=月額 / WEEKLY=週額 / ONE_TIME=単月本体額
+  startDate    DateTime
+  endDate      DateTime? // null = 継続中
   status     String    @default("ACTIVE") // ACTIVE | ENDED
   memo       String?
   createdAt  DateTime  @default(now())

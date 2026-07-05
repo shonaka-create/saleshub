@@ -2,12 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import {
-  COUNTRIES,
-  COUNTRY_LABELS,
-  CUSTOMER_STATUSES,
-  CUSTOMER_STATUS_LABELS,
-} from "@/lib/constants";
+import { COUNTRIES, COUNTRY_LABELS } from "@/lib/constants";
 import { btnPrimary, btnSecondary, inputCls, labelCls, selectCls } from "@/components/ui";
 import type { CustomerFormState } from "@/app/actions/customers";
 
@@ -85,24 +80,6 @@ export function CustomerForm({
               {COUNTRIES.map((c) => (
                 <option key={c} value={c}>
                   {COUNTRY_LABELS[c]}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className={labelCls} htmlFor="status">
-              ステータス
-            </label>
-            <select
-              id="status"
-              name="status"
-              defaultValue={values.status ?? "LEAD"}
-              className={fieldSelectCls}
-            >
-              {CUSTOMER_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {CUSTOMER_STATUS_LABELS[s]}
                 </option>
               ))}
             </select>

@@ -6,25 +6,17 @@ import { buildInsightsReport } from "@/lib/insights";
 import { addMonths, currentMonthKey, formatMonthJa } from "@/lib/months";
 import { formatMoney } from "@/lib/currency";
 import { DEAL_STAGE_LABELS } from "@/lib/constants";
-import { PageHeader, Card, btnPrimary, btnSecondary, inputCls, labelCls } from "@/components/ui";
+import { PageHeader, Card, btnSecondary, inputCls, labelCls } from "@/components/ui";
 import {
   startProCheckout,
-  startProTrialCheckout,
   openBillingPortal,
   updateInsightsSettings,
 } from "@/app/actions/billing";
 import { RevenueStackedChart, PipelineChart } from "./charts";
 import { PnlChart, ContractsChart, OutsourcingChart } from "../insights/charts";
+import { ProUpsell } from "../pro-upsell";
 
 export const metadata = { title: "経営数値分析" };
-
-const PRO_FEATURES = [
-  "MRR / ARR / 解約率のトレンド分析",
-  "LTV・CAC・ユニットエコノミクス (LTV/CAC)",
-  "CAC回収期間・ARPU・粗利率",
-  "契約の増減 (新規・解約・稼働) の推移",
-  "外注費の上限アラートと急増検知",
-];
 
 export default async function DashboardPage({
   searchParams,
@@ -386,100 +378,18 @@ export default async function DashboardPage({
             </Card>
           </div>
         </>
-      ) : status.trialAvailable ? (
-        /* トライアル未開始: カード登録 + 継続課金への同意を得てから Stripe Checkout へ */
-        <Card className="p-8">
-          <div className="text-center">
-            <p className="text-3xl">📈</p>
-            <h3 className="mt-3 text-lg font-bold text-slate-900">
-              グラフ・経営分析を14日間無料で試せます
-            </h3>
-            <p className="mt-2 text-sm text-slate-500">
-              Pro プラン (月額 ¥{PRO_PRICE_JPY} 税込・基本プランとは別途) の全機能をお試しいただけます。
-            </p>
-          </div>
-          <ul className="mx-auto mt-5 max-w-sm space-y-2 text-sm text-slate-700">
-            {[
-              "サービス別売上・損益・案件パイプラインのグラフ",
-              ...PRO_FEATURES,
-            ].map((f) => (
-              <li key={f} className="flex items-start gap-2">
-                <span className="text-emerald-600">✓</span>
-                {f}
-              </li>
-            ))}
-          </ul>
-
-          {/* トライアル開始前のご案内 (課金情報の収集と継続課金について) */}
-          <div className="mx-auto mt-6 max-w-md rounded-xl border border-amber-200 bg-amber-50 p-4 text-left">
-            <p className="text-sm font-bold text-amber-900">トライアル開始前にご確認ください</p>
-            <ul className="mt-2 space-y-1.5 text-xs leading-relaxed text-amber-800">
-              <li>
-                ・トライアルの開始には<strong>クレジットカード情報の登録</strong>が必要です (Stripe
-                の安全な決済ページで入力します)
-              </li>
-              <li>
-                ・{TRIAL_DAYS}日間の無料期間が終了すると、
-                <strong>自動的に月額 ¥{PRO_PRICE_JPY} (税込) の継続課金が始まります</strong>
-              </li>
-              <li>
-                ・トライアル中はいつでも解約できます。
-                <strong>期間内に解約すれば料金は一切かかりません</strong>
-                (解約はこのページの「トライアルを終了する」ボタンからいつでも行えます)
-              </li>
-              <li>・無料トライアルは1組織につき1回のみです</li>
-            </ul>
-          </div>
-
-          {admin ? (
-            <form action={startProTrialCheckout} className="mx-auto mt-5 max-w-md text-center">
-              <label className="flex items-start justify-center gap-2 text-left text-xs text-slate-600">
-                <input type="checkbox" name="consent" required className="mt-0.5" />
-                <span>
-                  上記の内容 (カード情報の登録・トライアル終了後の自動課金・解約方法)
-                  を確認し、同意します
-                </span>
-              </label>
-              <button type="submit" className={`${btnPrimary} mt-4`}>
-                同意してカードを登録し、14日間無料トライアルを開始
-              </button>
-              <p className="mt-2 text-[11px] text-slate-400">
-                Stripe の決済ページに移動します。トライアル期間中は請求されません。
-              </p>
-            </form>
-          ) : (
-            <p className="mt-6 text-center text-xs text-slate-400">
-              トライアルの開始には管理者権限が必要です。組織のオーナーにご依頼ください。
-            </p>
-          )}
-        </Card>
       ) : (
-        /* トライアル終了 & 未契約 */
-        <Card className="p-8 text-center">
-          <p className="text-3xl">📈</p>
-          <h3 className="mt-3 text-lg font-bold text-slate-900">無料トライアルは終了しました</h3>
-          <p className="mt-2 text-sm text-slate-500">
-            経営分析は Pro プラン (月額 ¥{PRO_PRICE_JPY}) でご利用いただけます。
-          </p>
-          <ul className="mx-auto mt-5 max-w-sm space-y-2 text-left text-sm text-slate-700">
-            {PRO_FEATURES.map((f) => (
-              <li key={f} className="flex items-start gap-2">
-                <span className="text-emerald-600">✓</span>
-                {f}
-              </li>
-            ))}
-          </ul>
-          {admin ? (
-            <form action={startProCheckout} className="mt-6">
-              <button type="submit" className={btnPrimary}>
-                Pro プランに登録する (月額 ¥{PRO_PRICE_JPY})
-              </button>
-            </form>
-          ) : (
-            <p className="mt-6 text-xs text-slate-400">
-              登録には管理者権限が必要です。組織のオーナーにご依頼ください。
-            </p>
-          )}
+        /* Pro 未アクセス: トライアル未開始ならトライアル導線、終了済みなら登録導線 (両機能開放を明示) */
+        <Card className="p-8">
+          <ProUpsell
+            admin={admin}
+            trialAvailable={status.trialAvailable}
+            headline={
+              status.trialAvailable
+                ? "グラフ・経営分析を含む Pro 機能を14日間無料で試せます"
+                : "無料トライアルは終了しました"
+            }
+          />
         </Card>
       )}
     </div>

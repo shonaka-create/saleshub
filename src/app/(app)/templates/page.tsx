@@ -1,8 +1,8 @@
-import Link from "next/link";
-import { requireSession, isCurrentUserSystemAdmin } from "@/lib/auth";
+import { requireSession, isAdmin, isCurrentUserSystemAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { planStatus, PRO_PRICE_JPY } from "@/lib/plan";
+import { planStatus } from "@/lib/plan";
 import { PageHeader, Card } from "@/components/ui";
+import { ProUpsell } from "../pro-upsell";
 import { TemplateLibrary } from "./templates-client";
 
 export const metadata = { title: "テンプレート" };
@@ -25,22 +25,18 @@ export default async function TemplatesPage() {
       <div>
         <PageHeader
           title="テンプレート"
-          description="普段使う提案書・見積書・契約書などのファイルを保管し、必要なときにダウンロードして使えます。"
+          description="提案書・見積書・契約書などのファイル (Word / Excel / PowerPoint / PDF) や Canva・Notion 等のURLを保管し、必要なときにすぐ開ける保管庫です。"
         />
-        <Card className="p-8 text-center">
-          <p className="text-3xl">📁</p>
-          <h3 className="mt-3 text-lg font-bold text-slate-900">
-            テンプレートは Pro プランの機能です
-          </h3>
-          <p className="mt-2 text-sm text-slate-500">
-            Pro プラン (月額 ¥{PRO_PRICE_JPY}/人) または14日間無料トライアルでご利用いただけます。
-          </p>
-          <Link
-            href="/dashboard"
-            className="mt-6 inline-block rounded-lg bg-akane-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-akane-700"
-          >
-            トライアル・プラン登録へ (経営数値分析ページ) →
-          </Link>
+        <Card className="p-8">
+          <ProUpsell
+            admin={isAdmin(session.role)}
+            trialAvailable={status.trialAvailable}
+            headline={
+              status.trialAvailable
+                ? "テンプレートを含む Pro 機能を14日間無料で試せます"
+                : "テンプレートは Pro プランの機能です"
+            }
+          />
         </Card>
       </div>
     );

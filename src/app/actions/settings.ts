@@ -91,7 +91,7 @@ export async function createService(formData: FormData) {
       sortOrder: count,
     },
   });
-  revalidatePath("/revenue/services");
+  revalidatePath("/services");
   revalidatePath("/revenue");
 }
 
@@ -108,14 +108,14 @@ export async function updateService(formData: FormData) {
       color: String(formData.get("color") ?? "#6366f1"),
     },
   });
-  revalidatePath("/revenue/services");
+  revalidatePath("/services");
   revalidatePath("/revenue");
 }
 
 export async function toggleServiceArchived(id: string, archived: boolean) {
   const session = await requireAdmin();
   await db.service.updateMany({ where: { id, orgId: session.org.id }, data: { archived } });
-  revalidatePath("/revenue/services");
+  revalidatePath("/services");
   revalidatePath("/revenue");
 }
 
@@ -135,7 +135,7 @@ export async function createPlan(formData: FormData) {
       sortOrder: count,
     },
   });
-  revalidatePath("/revenue/services");
+  revalidatePath("/services");
 }
 
 export async function updatePlan(formData: FormData) {
@@ -154,13 +154,13 @@ export async function updatePlan(formData: FormData) {
       active: formData.get("active") === "on",
     },
   });
-  revalidatePath("/revenue/services");
+  revalidatePath("/services");
 }
 
 export async function deletePlan(id: string) {
   const session = await requireAdmin();
   await db.plan.deleteMany({ where: { id, service: { orgId: session.org.id } } });
-  revalidatePath("/revenue/services");
+  revalidatePath("/services");
 }
 
 // ===== 経費カテゴリ =====

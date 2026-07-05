@@ -4,12 +4,18 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireSession } from "@/lib/auth";
+import { BILLING_CYCLES } from "@/lib/constants";
 
 export type ContractFormState = { error?: string };
 
 function toNum(formData: FormData, key: string): number {
   const v = Number(formData.get(key));
   return Number.isFinite(v) ? v : 0;
+}
+
+function billingCycle(formData: FormData): string {
+  const v = String(formData.get("billingCycle") ?? "MONTHLY");
+  return (BILLING_CYCLES as readonly string[]).includes(v) ? v : "MONTHLY";
 }
 
 function optStr(formData: FormData, key: string): string | null {
@@ -60,6 +66,7 @@ export async function createContract(
       planId,
       dealId,
       name,
+      billingCycle: billingCycle(formData),
       initialFee: toNum(formData, "initialFee"),
       monthlyFee: toNum(formData, "monthlyFee"),
       startDate: startRaw ? new Date(startRaw) : new Date(),
@@ -118,6 +125,7 @@ export async function updateContract(
       serviceId,
       planId,
       name,
+      billingCycle: billingCycle(formData),
       initialFee: toNum(formData, "initialFee"),
       monthlyFee: toNum(formData, "monthlyFee"),
       startDate: startRaw ? new Date(startRaw) : existing.startDate,

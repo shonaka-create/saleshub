@@ -50,6 +50,7 @@ export default async function EditContractPage({ params }: { params: Promise<{ i
     customerId: contract.customerId,
     serviceId: contract.serviceId,
     planId: contract.planId ?? "",
+    billingCycle: contract.billingCycle,
     initialFee: contract.initialFee,
     monthlyFee: contract.monthlyFee,
     startDate: toDateInput(contract.startDate),

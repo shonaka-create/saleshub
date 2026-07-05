@@ -1,14 +1,8 @@
 "use client";
 
-import { CURRENCIES } from "@/lib/constants";
+import { CURRENCIES, CURRENCY_LABELS } from "@/lib/constants";
 import { btnPrimary, inputCls, labelCls, selectCls } from "@/components/ui";
 import { updateOrg } from "@/app/actions/settings";
-
-const CURRENCY_LABELS: Record<string, string> = {
-  JPY: "JPY (日本円)",
-  AUD: "AUD (豪ドル)",
-  USD: "USD (米ドル)",
-};
 
 export function OrgSettingsForm(props: {
   admin: boolean;

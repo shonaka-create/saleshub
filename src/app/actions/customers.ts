@@ -37,9 +37,10 @@ async function buildCustomData(formData: FormData, orgId: string): Promise<strin
 }
 
 function customerFieldsFromForm(formData: FormData) {
+  // status は顧客フォームから廃止 (案件管理のステージと二重入力になるため)。
+  // 新規は Prisma の既定値 (LEAD)、更新時は既存値を維持し、ここでは書き込まない。
   return {
     country: String(formData.get("country") ?? "JP"),
-    status: String(formData.get("status") ?? "LEAD"),
     industry: strOrNull(formData.get("industry")),
     email: strOrNull(formData.get("email")),
     phone: strOrNull(formData.get("phone")),

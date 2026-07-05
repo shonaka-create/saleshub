@@ -8,10 +8,17 @@ export const ROLE_LABELS: Record<Role, string> = {
   MEMBER: "メンバー",
 };
 
-export const COUNTRIES = ["JP", "AU", "OTHER"] as const;
+// 主要国を選べるようにする (日本をデフォルト)。過去データの "AU" 等も引き続き表示できる。
+export const COUNTRIES = ["JP", "US", "CN", "KR", "AU", "GB", "SG", "TW", "OTHER"] as const;
 export const COUNTRY_LABELS: Record<string, string> = {
   JP: "🇯🇵 日本",
+  US: "🇺🇸 アメリカ",
+  CN: "🇨🇳 中国",
+  KR: "🇰🇷 韓国",
   AU: "🇦🇺 オーストラリア",
+  GB: "🇬🇧 イギリス",
+  SG: "🇸🇬 シンガポール",
+  TW: "🇹🇼 台湾",
   OTHER: "🌏 その他",
 };
 
@@ -63,12 +70,52 @@ export const SERVICE_CATEGORY_LABELS: Record<string, string> = {
   OTHER: "その他",
 };
 
-export const CURRENCIES = ["JPY", "AUD", "USD"] as const;
+// 基準通貨 (組織単位)。デフォルトは JPY。主要国の通貨を選べる。
+export const CURRENCIES = ["JPY", "USD", "CNY", "KRW", "AUD", "GBP", "EUR", "SGD", "TWD"] as const;
 export const CURRENCY_SYMBOLS: Record<string, string> = {
   JPY: "¥",
-  AUD: "A$",
   USD: "$",
+  CNY: "元",
+  KRW: "₩",
+  AUD: "A$",
+  GBP: "£",
+  EUR: "€",
+  SGD: "S$",
+  TWD: "NT$",
 };
+export const CURRENCY_LABELS: Record<string, string> = {
+  JPY: "日本円 (¥)",
+  USD: "米ドル ($)",
+  CNY: "人民元 (元)",
+  KRW: "韓国ウォン (₩)",
+  AUD: "豪ドル (A$)",
+  GBP: "英ポンド (£)",
+  EUR: "ユーロ (€)",
+  SGD: "シンガポールドル (S$)",
+  TWD: "台湾ドル (NT$)",
+};
+
+// 契約の課金頻度。売上計上の仕方を切り替える。
+// MONTHLY: 毎月 monthlyFee を計上 / WEEKLY: 週額を月換算 (×4.33) / ONE_TIME: 開始月に一度だけ計上
+export const BILLING_CYCLES = ["MONTHLY", "WEEKLY", "ONE_TIME"] as const;
+export const BILLING_CYCLE_LABELS: Record<string, string> = {
+  MONTHLY: "毎月",
+  WEEKLY: "各週",
+  ONE_TIME: "単月",
+};
+export const WEEKS_PER_MONTH = 52 / 12; // 週額→月額の換算係数 (年52週 ÷ 12ヶ月 ≈ 4.33)
+
+// 契約の「毎月の経常売上」を頻度に応じて返す (初期費用・単月本体は含まない)。
+export function recurringMonthlyFee(cycle: string, fee: number): number {
+  if (cycle === "WEEKLY") return fee * WEEKS_PER_MONTH;
+  if (cycle === "ONE_TIME") return 0; // 単月は経常ではない (開始月に一度だけ)
+  return fee; // MONTHLY
+}
+
+// 開始月にだけ一度計上する額 (初期費用 + 単月契約の本体額)。
+export function oneTimeFeeAtStart(cycle: string, initialFee: number, monthlyFee: number): number {
+  return initialFee + (cycle === "ONE_TIME" ? monthlyFee : 0);
+}
 
 export const MONTHLY_VALUE_TYPES = {
   REVENUE_OVERRIDE: "REVENUE_OVERRIDE",

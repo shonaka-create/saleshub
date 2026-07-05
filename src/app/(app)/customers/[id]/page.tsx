@@ -2,15 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { db } from "@/lib/db";
-import {
-  COUNTRY_LABELS,
-  CUSTOMER_STATUS_COLORS,
-  CUSTOMER_STATUS_LABELS,
-  DEAL_STAGE_LABELS,
-} from "@/lib/constants";
+import { COUNTRY_LABELS, DEAL_STAGE_LABELS } from "@/lib/constants";
 import { formatMoney } from "@/lib/currency";
 import { PageHeader, Card, Badge, btnSecondary, inputCls } from "@/components/ui";
-import { ActivityPanel } from "@/components/activity-panel";
 import { addContact, deleteContact } from "@/app/actions/customers";
 import { DeleteCustomerButton } from "../delete-customer-button";
 
@@ -38,10 +32,6 @@ export default async function CustomerDetailPage({
       contracts: {
         orderBy: { startDate: "desc" },
         include: { deal: { select: { id: true, title: true } } },
-      },
-      activities: {
-        orderBy: { occurredAt: "desc" },
-        include: { user: { select: { name: true } }, deal: { select: { id: true, title: true } } },
       },
     },
   });
@@ -106,7 +96,6 @@ export default async function CustomerDetailPage({
     <div>
       <PageHeader
         title={customer.name}
-        description={CUSTOMER_STATUS_LABELS[customer.status] ?? customer.status}
         actions={
           <div className="flex items-center gap-2">
             <Link href={`/customers/${customer.id}/edit`} className={btnSecondary}>
@@ -117,16 +106,15 @@ export default async function CustomerDetailPage({
         }
       />
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Badge className={CUSTOMER_STATUS_COLORS[customer.status] ?? "bg-slate-100 text-slate-700"}>
-          {CUSTOMER_STATUS_LABELS[customer.status] ?? customer.status}
-        </Badge>
-        {tags.map((t) => (
-          <Badge key={t} className="bg-slate-100 text-slate-600">
-            {t}
-          </Badge>
-        ))}
-      </div>
+      {tags.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          {tags.map((t) => (
+            <Badge key={t} className="bg-slate-100 text-slate-600">
+              {t}
+            </Badge>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* メインカラム */}
@@ -168,14 +156,40 @@ export default async function CustomerDetailPage({
             )}
           </Card>
 
-          {/* 活動履歴 (顧客・案件・契約ページで共通) */}
+          {/* 案件メモ (案件ごとに一覧でパッと確認できる) */}
           <Card className="p-6">
-            <h2 className="mb-4 text-sm font-semibold text-slate-700">活動履歴</h2>
-            <ActivityPanel
-              customerId={customer.id}
-              path={`/customers/${customer.id}`}
-              activities={customer.activities}
-            />
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-slate-700">案件メモ</h2>
+              <span className="text-xs text-slate-400">案件ごとのメモを一覧表示</span>
+            </div>
+            {customer.deals.length === 0 ? (
+              <p className="text-sm text-slate-400">案件はまだありません</p>
+            ) : (
+              <ul className="space-y-3">
+                {customer.deals.map((d) => (
+                  <li key={d.id} className="border-b border-slate-100 pb-3 last:border-0 last:pb-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <Link href={`/deals/${d.id}`} className="text-sm font-medium text-akane-700 hover:underline">
+                        {d.title}
+                      </Link>
+                      <Badge className="bg-slate-100 text-slate-600">
+                        {DEAL_STAGE_LABELS[d.stage] ?? d.stage}
+                      </Badge>
+                    </div>
+                    {d.memo ? (
+                      <p className="mt-1 whitespace-pre-wrap break-words text-sm text-slate-600">{d.memo}</p>
+                    ) : (
+                      <p className="mt-1 text-xs text-slate-400">
+                        メモなし ·{" "}
+                        <Link href={`/deals/${d.id}`} className="text-akane-600 hover:underline">
+                          案件を開いて追記
+                        </Link>
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
           </Card>
         </div>
 
