@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
+import { currentUserHasTeamAccess } from "@/lib/plan";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/currency";
 import { PageHeader, Card, Badge, btnSecondary } from "@/components/ui";
@@ -25,13 +26,14 @@ export default async function ContractDetailPage({ params }: { params: Promise<{
   if (!contract) notFound();
 
   // 活動履歴は顧客単位で共有 (顧客・案件ページで記録した内容もここに表示される)
-  const [activities, steps] = await Promise.all([
+  const [activities, steps, hasTeam] = await Promise.all([
     db.activity.findMany({
       where: { customerId: contract.customerId, orgId },
       include: { user: { select: { name: true } }, deal: { select: { id: true, title: true } } },
       orderBy: { occurredAt: "desc" },
     }),
     getContractSteps(orgId, contract.id),
+    currentUserHasTeamAccess(orgId),
   ]);
   const doneCount = steps.filter((s) => s.completedAt !== null).length;
 
@@ -85,6 +87,7 @@ export default async function ContractDetailPage({ params }: { params: Promise<{
                       label={s.label}
                       completedAt={s.completedAt}
                       feature={s.feature}
+                      hasTeamAccess={hasTeam}
                     />
                   ))}
                 </div>
@@ -168,17 +171,26 @@ export default async function ContractDetailPage({ params }: { params: Promise<{
             <h2 className="mb-1 text-sm font-semibold text-slate-700">次のステップ</h2>
             <p className="mb-4 text-xs text-slate-400">
               契約後の書類・経費まわりは「チーム機能」でまとめて管理できます
+              {!hasTeam && "（チームプランへのアップグレードが必要です）"}
             </p>
             <div className="flex flex-wrap gap-2">
-              <Link href="/team/contract-docs" className={btnSecondary}>
-                📄 契約書管理
-              </Link>
-              <Link href="/team/invoices" className={btnSecondary}>
-                🧾 請求書管理
-              </Link>
-              <Link href="/team/outsourcing-costs" className={btnSecondary}>
-                💸 委託費管理
-              </Link>
+              {(
+                [
+                  ["/team/contract-docs", "📄 契約書管理"],
+                  ["/team/invoices", "🧾 請求書管理"],
+                  ["/team/outsourcing-costs", "💸 委託費管理"],
+                ] as const
+              ).map(([href, label]) =>
+                hasTeam ? (
+                  <Link key={href} href={href} className={btnSecondary}>
+                    {label}
+                  </Link>
+                ) : (
+                  <Link key={href} href="/billing" className={btnSecondary}>
+                    🔒 {label}
+                  </Link>
+                )
+              )}
             </div>
           </Card>
         </div>

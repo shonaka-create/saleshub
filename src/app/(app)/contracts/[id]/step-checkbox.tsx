@@ -11,12 +11,14 @@ export function StepCheckbox({
   label,
   completedAt,
   feature,
+  hasTeamAccess = true,
 }: {
   contractId: string;
   stepDefId: string;
   label: string;
   completedAt: Date | null;
   feature: string | null;
+  hasTeamAccess?: boolean; // 定型プロセス (チーム機能) を開けるか
 }) {
   const [completed, setCompleted] = useState(completedAt !== null);
   const [, startTransition] = useTransition();
@@ -42,11 +44,16 @@ export function StepCheckbox({
           {label}
         </span>
       </label>
-      {meta && (
-        <Link href={meta.href} className="text-xs font-medium text-akane-600 hover:underline">
-          開く →
-        </Link>
-      )}
+      {meta &&
+        (hasTeamAccess ? (
+          <Link href={meta.href} className="text-xs font-medium text-akane-600 hover:underline">
+            開く →
+          </Link>
+        ) : (
+          <Link href="/billing" className="text-xs font-medium text-indigo-500 hover:underline">
+            🔒 チーム機能
+          </Link>
+        ))}
       {completed && completedAt && (
         <span className="text-xs text-slate-400">
           {new Date(completedAt).toLocaleDateString("ja-JP")}

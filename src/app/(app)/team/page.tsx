@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireSession } from "@/lib/auth";
+import { currentUserHasTeamAccess, TEAM_PRICE_JPY } from "@/lib/plan";
 import { PageHeader, Card, Badge } from "@/components/ui";
 
 export const metadata = { title: "チーム機能" };
@@ -51,23 +52,39 @@ const UPCOMING = [
 ];
 
 export default async function TeamPage() {
-  await requireSession();
+  const session = await requireSession();
+  const hasTeam = await currentUserHasTeamAccess(session.org.id);
   return (
     <div>
       <PageHeader
         title="チーム機能"
-        description="チームでの生産性を高める機能を、今後このページに順次追加していきます"
+        description={`契約書・請求書・委託費管理などのバックオフィス機能をまとめて提供します (¥${TEAM_PRICE_JPY.toLocaleString()}/人・月)`}
       />
 
-      <Card className="mb-6 border-sky-100 bg-sky-50/50 p-4">
-        <p className="text-sm text-slate-600">
-          📄 契約書・請求書・委託費の管理は下記から利用できます。
-          <Link href="/contracts/steps" className="mx-1 font-medium text-akane-600 hover:underline">
-            契約管理の手続きテンプレート
+      {hasTeam ? (
+        <Card className="mb-6 border-sky-100 bg-sky-50/50 p-4">
+          <p className="text-sm text-slate-600">
+            📄 契約書・請求書・委託費の管理は下記から利用できます。
+            <Link href="/contracts/steps" className="mx-1 font-medium text-akane-600 hover:underline">
+              契約管理の手続きテンプレート
+            </Link>
+            に手続きプロセスとして追加すると、各契約のチェックリストからも開けます。
+          </p>
+        </Card>
+      ) : (
+        <Card className="mb-6 flex flex-wrap items-center justify-between gap-3 border-indigo-100 bg-indigo-50/50 p-4">
+          <p className="text-sm text-slate-600">
+            🔒 契約書・請求書・委託費管理はチームプランの機能です。アップグレードすると Pro
+            プランの経営数値分析もあわせてご利用いただけます。
+          </p>
+          <Link
+            href="/billing"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-gradient-to-r from-sky-500 to-indigo-500 px-3.5 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+          >
+            アップグレード →
           </Link>
-          に手続きプロセスとして追加すると、各契約のチェックリストからも開けます。
-        </p>
-      </Card>
+        </Card>
+      )}
 
       <h2 className="mb-3 text-sm font-bold text-slate-700">バックオフィス管理</h2>
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -77,7 +94,11 @@ export default async function TeamPage() {
               <p className="text-3xl">{item.icon}</p>
               <h3 className="mt-3 text-sm font-bold text-slate-900">{item.title}</h3>
               <p className="mt-1 text-xs text-slate-500">{item.description}</p>
-              <Badge className="mt-3 bg-emerald-50 text-emerald-700">利用可能</Badge>
+              {hasTeam ? (
+                <Badge className="mt-3 bg-emerald-50 text-emerald-700">利用可能</Badge>
+              ) : (
+                <Badge className="mt-3 bg-indigo-50 text-indigo-600">🔒 チーム機能</Badge>
+              )}
             </Card>
           </Link>
         ))}
@@ -106,7 +127,8 @@ export default async function TeamPage() {
       </div>
 
       <p className="mt-6 text-xs text-slate-400">
-        契約書・請求書・委託費管理は基本プランに含まれ、今すぐご利用いただけます。タスク管理・アサイン管理・WBS などは「チーム」プラン (¥3,000/月) として今後公開予定です。追加してほしい機能があればお気軽にお問い合わせください。
+        契約書・請求書・委託費管理はチームプラン (¥{TEAM_PRICE_JPY.toLocaleString()}/人・月) の機能で、Pro
+        プランの全機能も含まれます。タスク管理・アサイン管理・WBS などは順次追加予定です。追加してほしい機能があればお気軽にお問い合わせください。
       </p>
     </div>
   );
