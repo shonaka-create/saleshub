@@ -103,6 +103,8 @@ export default async function CustomersPage({
                 <th className="px-4 py-3 font-medium">顧客名</th>
                 <th className="px-4 py-3 font-medium">国</th>
                 <th className="px-4 py-3 font-medium">業種</th>
+                <th className="px-4 py-3 font-medium">メール</th>
+                <th className="px-4 py-3 font-medium">電話</th>
                 <th className="px-4 py-3 font-medium">タグ</th>
                 <th className="px-4 py-3 font-medium">Instagram</th>
                 <th className="px-4 py-3 font-medium">登録日</th>
@@ -125,6 +127,24 @@ export default async function CustomersPage({
                       {COUNTRY_LABELS[c.country] ?? c.country}
                     </td>
                     <td className="px-4 py-3 text-slate-600">{c.industry ?? "—"}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-slate-600">
+                      {c.email ? (
+                        <a href={`mailto:${c.email}`} className="text-akane-700 hover:underline">
+                          {c.email}
+                        </a>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-slate-600">
+                      {c.phone ? (
+                        <a href={`tel:${c.phone}`} className="text-akane-700 hover:underline">
+                          {c.phone}
+                        </a>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1">
                         {tags.length === 0
