@@ -21,10 +21,17 @@ export default async function CustomersPage({
     ...(country ? { country } : {}),
     ...(q
       ? {
+          // 顧客登録フォームのテキスト項目すべてを横断検索する
           OR: [
             { name: { contains: q } },
+            { industry: { contains: q } },
             { email: { contains: q } },
+            { phone: { contains: q } },
             { instagram: { contains: q } },
+            { website: { contains: q } },
+            { address: { contains: q } },
+            { tags: { contains: q } },
+            { memo: { contains: q } },
           ],
         }
       : {}),
@@ -65,8 +72,8 @@ export default async function CustomersPage({
             type="text"
             name="q"
             defaultValue={q}
-            placeholder="名前・メール・Instagram"
-            className={inputCls + " w-56"}
+            placeholder="名前・業種・メール・電話・住所・タグなど"
+            className={inputCls + " w-64"}
           />
         </div>
         <div>
@@ -100,14 +107,14 @@ export default async function CustomersPage({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
-                <th className="px-4 py-3 font-medium">顧客名</th>
-                <th className="px-4 py-3 font-medium">国</th>
-                <th className="px-4 py-3 font-medium">業種</th>
-                <th className="px-4 py-3 font-medium">メール</th>
-                <th className="px-4 py-3 font-medium">電話</th>
-                <th className="px-4 py-3 font-medium">タグ</th>
-                <th className="px-4 py-3 font-medium">Instagram</th>
-                <th className="px-4 py-3 font-medium">登録日</th>
+                <th className="whitespace-nowrap px-5 py-3 font-medium">顧客名</th>
+                <th className="whitespace-nowrap px-5 py-3 font-medium">国</th>
+                <th className="whitespace-nowrap px-5 py-3 font-medium">業種</th>
+                <th className="whitespace-nowrap px-5 py-3 font-medium">メール</th>
+                <th className="whitespace-nowrap px-5 py-3 font-medium">電話</th>
+                <th className="whitespace-nowrap px-5 py-3 font-medium">タグ</th>
+                <th className="whitespace-nowrap px-5 py-3 font-medium">Instagram</th>
+                <th className="whitespace-nowrap px-5 py-3 font-medium">登録日</th>
               </tr>
             </thead>
             <tbody>
@@ -115,7 +122,7 @@ export default async function CustomersPage({
                 const tags = c.tags.split(",").map((t) => t.trim()).filter(Boolean);
                 return (
                   <tr key={c.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                    <td className="px-4 py-3">
+                    <td className="whitespace-nowrap px-5 py-3">
                       <Link
                         href={`/customers/${c.id}`}
                         className="font-medium text-akane-700 hover:underline"
@@ -123,11 +130,11 @@ export default async function CustomersPage({
                         {c.name}
                       </Link>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-slate-600">
+                    <td className="whitespace-nowrap px-5 py-3 text-slate-600">
                       {COUNTRY_LABELS[c.country] ?? c.country}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{c.industry ?? "—"}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-slate-600">
+                    <td className="whitespace-nowrap px-5 py-3 text-slate-600">{c.industry ?? "—"}</td>
+                    <td className="whitespace-nowrap px-5 py-3 text-slate-600">
                       {c.email ? (
                         <a href={`mailto:${c.email}`} className="text-akane-700 hover:underline">
                           {c.email}
@@ -136,7 +143,7 @@ export default async function CustomersPage({
                         <span className="text-slate-400">—</span>
                       )}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-slate-600">
+                    <td className="whitespace-nowrap px-5 py-3 text-slate-600">
                       {c.phone ? (
                         <a href={`tel:${c.phone}`} className="text-akane-700 hover:underline">
                           {c.phone}
@@ -145,7 +152,7 @@ export default async function CustomersPage({
                         <span className="text-slate-400">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-5 py-3">
                       <div className="flex flex-wrap gap-1">
                         {tags.length === 0
                           ? <span className="text-slate-400">—</span>
@@ -156,8 +163,8 @@ export default async function CustomersPage({
                             ))}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{c.instagram ?? "—"}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-slate-500">
+                    <td className="whitespace-nowrap px-5 py-3 text-slate-600">{c.instagram ?? "—"}</td>
+                    <td className="whitespace-nowrap px-5 py-3 text-slate-500">
                       {c.createdAt.toLocaleDateString("ja-JP")}
                     </td>
                   </tr>
