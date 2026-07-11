@@ -36,13 +36,6 @@ export default async function ServicesPage() {
         <p className="text-sm text-slate-500">サービスマスタの管理には管理者権限が必要です。</p>
       ) : (
         <div className="max-w-4xl space-y-6">
-          {/* カテゴリは自由入力。下記は入力補助の候補 (基本項目) で、任意の文字列も登録できる。 */}
-          <datalist id="service-categories">
-            {SERVICE_CATEGORIES.map((c) => (
-              <option key={c} value={SERVICE_CATEGORY_LABELS[c]} />
-            ))}
-          </datalist>
-
           {services.length === 0 && (
             <Card className="p-6 text-sm text-slate-500">
               まだサービスが登録されていません。下の「新しいサービスを追加」から登録してください。
@@ -59,13 +52,19 @@ export default async function ServicesPage() {
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-500">カテゴリ</label>
-                  <input
-                    name="category"
-                    list="service-categories"
-                    defaultValue={SERVICE_CATEGORY_LABELS[service.category] ?? service.category}
-                    placeholder="自由入力可"
-                    className={`${inputCls} w-40`}
-                  />
+                  <select name="category" defaultValue={service.category} className={`${inputCls} w-40`}>
+                    {/* 既存データが定義済みカテゴリ以外 (旧・自由入力) の場合はその値も選べるよう補う */}
+                    {!(SERVICE_CATEGORIES as readonly string[]).includes(service.category) && (
+                      <option value={service.category}>
+                        {SERVICE_CATEGORY_LABELS[service.category] ?? service.category}
+                      </option>
+                    )}
+                    {SERVICE_CATEGORIES.map((c) => (
+                      <option key={c} value={c}>
+                        {SERVICE_CATEGORY_LABELS[c]}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-500">表示色</label>
@@ -147,13 +146,13 @@ export default async function ServicesPage() {
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-500">カテゴリ</label>
-                <input
-                  name="category"
-                  list="service-categories"
-                  defaultValue="SaaS"
-                  placeholder="自由入力可"
-                  className={`${inputCls} w-40`}
-                />
+                <select name="category" defaultValue="SAAS" className={`${inputCls} w-40`}>
+                  {SERVICE_CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {SERVICE_CATEGORY_LABELS[c]}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-500">表示色</label>
