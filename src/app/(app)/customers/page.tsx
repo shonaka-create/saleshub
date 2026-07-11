@@ -6,6 +6,17 @@ import { PageHeader, Badge, EmptyState, PrimaryLink, selectCls, inputCls, btnSec
 import { CreatedToast } from "./created-toast";
 import type { Prisma } from "@prisma/client";
 
+// Instagram の URL から表示用のハンドル (@xxx) を取り出す。
+// URL でない場合や解析できない場合はそのまま表示する。
+function instaHandle(value: string): string {
+  try {
+    const seg = new URL(value).pathname.split("/").filter(Boolean)[0];
+    return seg ? `@${seg}` : value;
+  } catch {
+    return value;
+  }
+}
+
 export default async function CustomersPage({
   searchParams,
 }: {
@@ -104,7 +115,7 @@ export default async function CustomersPage({
         />
       ) : (
         <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-max text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
                 <th className="whitespace-nowrap px-5 py-3 font-medium">顧客名</th>
@@ -163,7 +174,20 @@ export default async function CustomersPage({
                             ))}
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-5 py-3 text-slate-600">{c.instagram ?? "—"}</td>
+                    <td className="whitespace-nowrap px-5 py-3 text-slate-600">
+                      {c.instagram ? (
+                        <a
+                          href={c.instagram}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-akane-700 hover:underline"
+                        >
+                          {instaHandle(c.instagram)}
+                        </a>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </td>
                     <td className="whitespace-nowrap px-5 py-3 text-slate-500">
                       {c.createdAt.toLocaleDateString("ja-JP")}
                     </td>
