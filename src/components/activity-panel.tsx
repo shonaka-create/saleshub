@@ -2,6 +2,8 @@ import Link from "next/link";
 import { ACTIVITY_TYPES, ACTIVITY_TYPE_LABELS } from "@/lib/constants";
 import { addActivity, deleteActivity } from "@/app/actions/activities";
 import { Badge, btnSecondary, inputCls, selectCls } from "./ui";
+import { ExpandableText } from "./expandable-text";
+import { ShowMoreList } from "./show-more-list";
 
 // 顧客・案件・契約の各ページで共通の活動履歴パネル。
 // 履歴は顧客単位で共有され、どのページで記録しても他のページから同じ内容が見える。
@@ -56,7 +58,7 @@ export function ActivityPanel({
       {activities.length === 0 ? (
         <p className="text-sm text-slate-400">まだ活動記録がありません</p>
       ) : (
-        <ul className="space-y-4">
+        <ShowMoreList initialCount={5}>
           {activities.map((a) => (
             <li key={a.id} className="border-l-2 border-akane-100 pl-3">
               <div className="flex flex-wrap items-center gap-2">
@@ -84,10 +86,10 @@ export function ActivityPanel({
                   </button>
                 </form>
               </div>
-              <p className="mt-1 whitespace-pre-wrap break-words text-sm text-slate-700">{a.content}</p>
+              <ExpandableText text={a.content} />
             </li>
           ))}
-        </ul>
+        </ShowMoreList>
       )}
     </div>
   );
