@@ -98,7 +98,7 @@ export function ActivityPanel({
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className={`${selectCls} flex-1`}
+            className={`${selectCls} w-full min-w-0 flex-1`}
           >
             <option value={ALL}>すべての案件</option>
             {deals.map((d) => (
