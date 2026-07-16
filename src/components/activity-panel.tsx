@@ -1,3 +1,6 @@
+"use client";
+
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ACTIVITY_TYPES, ACTIVITY_TYPE_LABELS } from "@/lib/constants";
 import { addActivity, deleteActivity } from "@/app/actions/activities";
@@ -17,6 +20,10 @@ export type ActivityItem = {
   deal: { id: string; title: string } | null;
 };
 
+// 案件フィルターの選択肢。"all" は全件表示 (従来動作)、"none" は案件に紐付かないメモ。
+const ALL = "all";
+const NONE = "none";
+
 export function ActivityPanel({
   customerId,
   dealId,
@@ -30,6 +37,28 @@ export function ActivityPanel({
   activities: ActivityItem[];
   currentDealId?: string | null; // このページ自身の案件 (案件バッジの表示判定用)
 }) {
+  const [filter, setFilter] = useState(ALL);
+
+  // 履歴に登場する案件を重複なく集める (登場順 = 新しい順)。
+  const deals = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const a of activities) {
+      if (a.deal && !seen.has(a.deal.id)) seen.set(a.deal.id, a.deal.title);
+    }
+    return [...seen].map(([id, title]) => ({ id, title }));
+  }, [activities]);
+
+  const hasUnlinked = useMemo(() => activities.some((a) => !a.deal), [activities]);
+
+  const filtered = useMemo(() => {
+    if (filter === ALL) return activities;
+    if (filter === NONE) return activities.filter((a) => !a.deal);
+    return activities.filter((a) => a.deal?.id === filter);
+  }, [activities, filter]);
+
+  // フィルターの選択肢が実在する場合のみ表示 (案件が1件も無ければ出さない)。
+  const showFilter = deals.length > 0;
+
   return (
     <div>
       <form action={addActivity} className="mb-5 space-y-3 rounded-lg bg-slate-50 p-4">
@@ -55,11 +84,35 @@ export function ActivityPanel({
         </button>
       </form>
 
-      {activities.length === 0 ? (
-        <p className="text-sm text-slate-400">まだ活動記録がありません</p>
+      {showFilter && (
+        <div className="mb-4 flex items-center gap-2">
+          <label className="text-xs font-medium text-slate-400">案件で絞り込み</label>
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className={`${selectCls} flex-1`}
+          >
+            <option value={ALL}>すべての案件</option>
+            {deals.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.title}
+              </option>
+            ))}
+            {hasUnlinked && <option value={NONE}>案件なし</option>}
+          </select>
+        </div>
+      )}
+
+      {filtered.length === 0 ? (
+        <p className="text-sm text-slate-400">
+          {activities.length === 0
+            ? "まだ活動記録がありません"
+            : "この案件の活動記録はありません"}
+        </p>
       ) : (
-        <ShowMoreList initialCount={5}>
-          {activities.map((a) => (
+        // フィルター変更時に ShowMoreList の展開状態をリセットする。
+        <ShowMoreList key={filter} initialCount={5}>
+          {filtered.map((a) => (
             <li key={a.id} className="border-l-2 border-akane-100 pl-3">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge className="bg-akane-50 text-akane-700">
