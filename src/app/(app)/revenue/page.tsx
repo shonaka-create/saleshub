@@ -44,7 +44,9 @@ export default async function RevenuePage({
       />
 
       <Card className="overflow-hidden">
-        <RevenueGrid report={report} />
+        {/* 表示範囲が変わったらグリッドを作り直す (RevenueGrid は report を useState で
+            初期化するため、key を変えないと月移動しても中身が更新されない) */}
+        <RevenueGrid key={`${from}_${to}`} report={report} />
       </Card>
 
       <p className="mt-4 text-xs text-slate-400">
