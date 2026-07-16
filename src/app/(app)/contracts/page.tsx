@@ -107,7 +107,7 @@ export default async function ContractsPage({
         <Card className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
+              <tr className="whitespace-nowrap border-b border-slate-200 text-left text-xs text-slate-500">
                 <th className="px-4 py-3 font-medium">契約名</th>
                 <th className="px-4 py-3 font-medium">顧客</th>
                 <th className="px-4 py-3 font-medium">元案件</th>
@@ -153,27 +153,27 @@ export default async function ContractsPage({
                     </span>
                   </td>
                   <td className="px-4 py-3 text-slate-600">{c.plan?.name ?? "—"}</td>
-                  <td className="px-4 py-3 text-slate-600">
+                  <td className="whitespace-nowrap px-4 py-3 text-slate-600">
                     <Badge className="bg-slate-100 text-slate-600">
                       {BILLING_CYCLE_LABELS[c.billingCycle] ?? "毎月"}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 text-right font-medium text-slate-700">
+                  <td className="whitespace-nowrap px-4 py-3 text-right font-medium text-slate-700">
                     {formatMoney(c.monthlyFee, session.org.baseCurrency)}
                   </td>
-                  <td className="px-4 py-3 text-right text-slate-600">
+                  <td className="whitespace-nowrap px-4 py-3 text-right text-slate-600">
                     {formatMoney(c.initialFee, session.org.baseCurrency)}
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{fmtDate(c.startDate)}</td>
-                  <td className="px-4 py-3 text-slate-600">{fmtDate(c.endDate)}</td>
-                  <td className="px-4 py-3">
+                  <td className="whitespace-nowrap px-4 py-3 text-slate-600">{fmtDate(c.startDate)}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-slate-600">{fmtDate(c.endDate)}</td>
+                  <td className="whitespace-nowrap px-4 py-3">
                     {c.status === "ACTIVE" ? (
                       <Badge className="bg-emerald-100 text-emerald-800">稼働中</Badge>
                     ) : (
                       <Badge className="bg-slate-100 text-slate-600">終了</Badge>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-slate-600">
+                  <td className="whitespace-nowrap px-4 py-3 text-slate-600">
                     {totalSteps === 0 ? (
                       "—"
                     ) : (

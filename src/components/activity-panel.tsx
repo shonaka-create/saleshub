@@ -86,7 +86,9 @@ export function ActivityPanel({
 
       {showFilter && (
         <div className="mb-4 flex items-center gap-2">
-          <label className="text-xs font-medium text-slate-400">案件で絞り込み</label>
+          <label className="shrink-0 whitespace-nowrap text-xs font-medium text-slate-400">
+            案件で絞り込み
+          </label>
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
