@@ -51,11 +51,19 @@ export default async function DealDetailPage({
   if (!deal) notFound();
 
   // 活動履歴は顧客単位で共有 (顧客・他案件・契約ページで記録した内容もここに表示される)
-  const activities = await db.activity.findMany({
-    where: { customerId: deal.customerId, orgId },
-    include: { user: { select: { name: true } }, deal: { select: { id: true, title: true } } },
-    orderBy: { occurredAt: "desc" },
-  });
+  const [activities, customerDeals] = await Promise.all([
+    db.activity.findMany({
+      where: { customerId: deal.customerId, orgId },
+      include: { user: { select: { name: true } }, deal: { select: { id: true, title: true } } },
+      orderBy: { occurredAt: "desc" },
+    }),
+    // 絞り込み用に顧客の全案件を取得 (メモがまだ無い案件も選べるように)
+    db.deal.findMany({
+      where: { customerId: deal.customerId, orgId },
+      select: { id: true, title: true },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
 
   const [defs] = await Promise.all([
     db.customFieldDef.findMany({ where: { orgId, entity: "deal" }, orderBy: { sortOrder: "asc" } }),
@@ -254,6 +262,7 @@ export default async function DealDetailPage({
               currentDealId={deal.id}
               path={`/deals/${deal.id}`}
               activities={activities}
+              customerDeals={customerDeals}
             />
           </Card>
         </div>

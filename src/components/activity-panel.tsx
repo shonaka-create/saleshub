@@ -30,23 +30,29 @@ export function ActivityPanel({
   path,
   activities,
   currentDealId,
+  customerDeals,
 }: {
   customerId: string;
   dealId?: string | null; // 記録時に紐付ける案件 (案件・契約ページから記録する場合)
   path: string; // revalidate 対象の現在ページ
   activities: ActivityItem[];
   currentDealId?: string | null; // このページ自身の案件 (案件バッジの表示判定用)
+  customerDeals?: { id: string; title: string }[]; // 顧客の全案件 (絞り込みの選択肢用)
 }) {
   const [filter, setFilter] = useState(ALL);
 
-  // 履歴に登場する案件を重複なく集める (登場順 = 新しい順)。
+  // 絞り込みの選択肢: 顧客の全案件があればそれを使い、無ければ履歴に登場する案件から補完する。
+  // (メモがまだ無い案件も選べるように、顧客の全案件を優先する)
   const deals = useMemo(() => {
     const seen = new Map<string, string>();
+    for (const d of customerDeals ?? []) {
+      if (!seen.has(d.id)) seen.set(d.id, d.title);
+    }
     for (const a of activities) {
       if (a.deal && !seen.has(a.deal.id)) seen.set(a.deal.id, a.deal.title);
     }
     return [...seen].map(([id, title]) => ({ id, title }));
-  }, [activities]);
+  }, [customerDeals, activities]);
 
   const hasUnlinked = useMemo(() => activities.some((a) => !a.deal), [activities]);
 
@@ -56,8 +62,8 @@ export function ActivityPanel({
     return activities.filter((a) => a.deal?.id === filter);
   }, [activities, filter]);
 
-  // フィルターの選択肢が実在する場合のみ表示 (案件が1件も無ければ出さない)。
-  const showFilter = deals.length > 0;
+  // 分けて見る意味がある場合のみ表示 (案件+「案件なし」で2グループ以上あるとき)。
+  const showFilter = deals.length + (hasUnlinked ? 1 : 0) > 1;
 
   return (
     <div>

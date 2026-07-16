@@ -26,7 +26,7 @@ export default async function ContractDetailPage({ params }: { params: Promise<{
   if (!contract) notFound();
 
   // 活動履歴は顧客単位で共有 (顧客・案件ページで記録した内容もここに表示される)
-  const [activities, steps, hasTeam] = await Promise.all([
+  const [activities, steps, hasTeam, customerDeals] = await Promise.all([
     db.activity.findMany({
       where: { customerId: contract.customerId, orgId },
       include: { user: { select: { name: true } }, deal: { select: { id: true, title: true } } },
@@ -34,6 +34,11 @@ export default async function ContractDetailPage({ params }: { params: Promise<{
     }),
     getContractSteps(orgId, contract.id),
     currentUserHasTeamAccess(orgId),
+    db.deal.findMany({
+      where: { customerId: contract.customerId, orgId },
+      select: { id: true, title: true },
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
   const doneCount = steps.filter((s) => s.completedAt !== null).length;
 
@@ -206,8 +211,10 @@ export default async function ContractDetailPage({ params }: { params: Promise<{
             <ActivityPanel
               customerId={contract.customerId}
               dealId={contract.dealId}
+              currentDealId={contract.dealId}
               path={`/contracts/${contract.id}`}
               activities={activities}
+              customerDeals={customerDeals}
             />
           </Card>
         </div>

@@ -21,12 +21,17 @@ export default async function EditContractPage({ params }: { params: Promise<{ i
   if (!contract) notFound();
 
   // 活動履歴は顧客単位で共有 (顧客・案件ページで記録した内容もここに表示される)
-  const [customer, activities] = await Promise.all([
+  const [customer, activities, customerDeals] = await Promise.all([
     db.customer.findFirst({ where: { id: contract.customerId, orgId }, select: { name: true } }),
     db.activity.findMany({
       where: { customerId: contract.customerId, orgId },
       include: { user: { select: { name: true } }, deal: { select: { id: true, title: true } } },
       orderBy: { occurredAt: "desc" },
+    }),
+    db.deal.findMany({
+      where: { customerId: contract.customerId, orgId },
+      select: { id: true, title: true },
+      orderBy: { createdAt: "desc" },
     }),
   ]);
 
@@ -94,8 +99,10 @@ export default async function EditContractPage({ params }: { params: Promise<{ i
             <ActivityPanel
               customerId={contract.customerId}
               dealId={contract.dealId}
+              currentDealId={contract.dealId}
               path={`/contracts/${contract.id}/edit`}
               activities={activities}
+              customerDeals={customerDeals}
             />
           </Card>
         </div>
