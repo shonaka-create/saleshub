@@ -21,7 +21,7 @@ export default function RegisterPage() {
           <div className="mb-3 rounded-xl bg-gradient-to-r from-akane-600 to-rose-500 px-4 py-3 text-center text-white">
             <p className="text-sm font-bold">🎉 早期登録キャンペーン実施中</p>
             <p className="mt-0.5 text-xs opacity-90">
-              2026年7月15日までのご登録で <strong>3ヶ月間無料</strong>
+              2026年7月31日までのご登録で <strong>3ヶ月間無料</strong>
             </p>
             <p className="mt-1 text-sm font-semibold">
               <Countdown deadlineIso={EARLY_BIRD_DEADLINE.toISOString()} />

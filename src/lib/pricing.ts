@@ -1,6 +1,6 @@
 // ===== サービス料金設計 (基本プラン) =====
 // - 基本プラン: 初月無料、以降 月額500円 (★1メンバーあたり = 席課金)
-// - 早期登録特典: 2026-07-15 (JST) までに登録した組織は3ヶ月無料 (= 早期登録なら実質¥0)
+// - 早期登録特典: 2026-07-31 (JST) までに登録した組織は3ヶ月無料 (= 早期登録なら実質¥0)
 // - Pro プラン (経営分析): 別途 月額490円 / 人 (lib/plan.ts)
 // - 課金額は「単価 × 組織のメンバー数」。メンバーを増やすとオーナーへの請求が加算される。
 // クライアント/サーバー両方から import できるよう純粋関数のみ置く。
@@ -17,7 +17,7 @@ export function seatTotal(unitPrice: number, members: number): number {
   return unitPrice * seatCount(members);
 }
 
-export const EARLY_BIRD_DEADLINE = new Date("2026-07-15T23:59:59+09:00");
+export const EARLY_BIRD_DEADLINE = new Date("2026-07-31T23:59:59+09:00");
 export const EARLY_BIRD_FREE_MONTHS = 3;
 export const NORMAL_FREE_MONTHS = 1;
 
