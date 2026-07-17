@@ -27,27 +27,25 @@ const AVAILABLE = [
   },
 ];
 
-const UPCOMING = [
+// チーム生産性機能 (タスク管理 / アサイン管理 / WBS)
+const PRODUCTIVITY = [
   {
     icon: "✅",
     title: "タスク管理",
-    description: "チームでのタスク割り当て・進捗共有",
-    href: null,
-    status: "近日公開",
+    description: "顧客・案件に紐づくタスクをチームで割り当て・進捗共有",
+    href: "/team/tasks",
   },
   {
     icon: "🙋",
     title: "アサイン管理",
-    description: "メンバーの担当・稼働状況を案件横断で可視化",
-    href: null,
-    status: "近日公開",
+    description: "メンバーの担当・月間工数・稼働状況を案件横断で可視化",
+    href: "/team/assignments",
   },
   {
     icon: "🗂️",
     title: "WBS (作業分解構成図)",
-    description: "案件・プロジェクトを工程単位に分解して進捗を可視化",
-    href: null,
-    status: "近日公開",
+    description: "タスクを工程単位に分解し、週次ガントで進捗を可視化",
+    href: "/team/wbs",
   },
 ];
 
@@ -104,31 +102,28 @@ export default async function TeamPage() {
         ))}
       </div>
 
-      <h2 className="mb-3 text-sm font-bold text-slate-700">今後追加予定</h2>
+      <h2 className="mb-3 text-sm font-bold text-slate-700">チーム生産性</h2>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {UPCOMING.map((item) => {
-          const badgeClass = "bg-slate-100 text-slate-500";
-          const content = (
+        {PRODUCTIVITY.map((item) => (
+          <Link key={item.title} href={item.href} className="block">
             <Card className="h-full p-5 transition hover:border-akane-300 hover:shadow">
               <p className="text-3xl">{item.icon}</p>
               <h2 className="mt-3 text-sm font-bold text-slate-900">{item.title}</h2>
               <p className="mt-1 text-xs text-slate-500">{item.description}</p>
-              <Badge className={`mt-3 ${badgeClass}`}>{item.status}</Badge>
+              {hasTeam ? (
+                <Badge className="mt-3 bg-emerald-50 text-emerald-700">利用可能</Badge>
+              ) : (
+                <Badge className="mt-3 bg-indigo-50 text-indigo-600">🔒 チーム機能</Badge>
+              )}
             </Card>
-          );
-          return item.href ? (
-            <Link key={item.title} href={item.href} className="block">
-              {content}
-            </Link>
-          ) : (
-            <div key={item.title}>{content}</div>
-          );
-        })}
+          </Link>
+        ))}
       </div>
 
       <p className="mt-6 text-xs text-slate-400">
-        契約書・請求書・委託費管理はチームプラン (¥{TEAM_PRICE_JPY.toLocaleString()}/人・月) の機能で、Pro
-        プランの全機能も含まれます。タスク管理・アサイン管理・WBS などは順次追加予定です。追加してほしい機能があればお気軽にお問い合わせください。
+        契約書・請求書・委託費管理とタスク管理・アサイン管理・WBS はチームプラン (¥
+        {TEAM_PRICE_JPY.toLocaleString()}/人・月) の機能で、Pro
+        プランの全機能も含まれます。追加してほしい機能があればお気軽にお問い合わせください。
       </p>
     </div>
   );

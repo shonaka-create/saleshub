@@ -188,6 +188,20 @@ export const INVOICE_FIELD_LABELS: Record<InvoiceDirection, { delivered: string;
   RECEIVED: { delivered: "受領", settled: "支払" },
 };
 
+// ===== タスク管理 / WBS =====
+export const TASK_STATUSES = ["TODO", "IN_PROGRESS", "DONE"] as const;
+export type TaskStatus = (typeof TASK_STATUSES)[number];
+export const TASK_STATUS_LABELS: Record<string, string> = {
+  TODO: "未着手",
+  IN_PROGRESS: "進行中",
+  DONE: "完了",
+};
+export const TASK_STATUS_COLORS: Record<string, string> = {
+  TODO: "bg-slate-100 text-slate-600",
+  IN_PROGRESS: "bg-sky-100 text-sky-800",
+  DONE: "bg-emerald-100 text-emerald-800",
+};
+
 // プリセットのカテゴリ (キーで保存)。これに加えて、ユーザーは自由入力カテゴリを作成でき、
 // その場合はラベル文字列そのものを category として保存する (キーではない)。
 export const TEMPLATE_CATEGORIES = ["PROPOSAL", "QUOTE", "CONTRACT", "INVOICE", "REPORT", "OTHER"] as const;

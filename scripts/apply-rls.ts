@@ -35,6 +35,9 @@ const ORG_TABLES = [
   "Invoice",
   "Subcontractor",
   "OutsourcingWork",
+  "TaskCategory",
+  "Task",
+  "Assignment",
 ];
 
 // 親テーブル経由で分離される子テーブル: [テーブル, 親参照カラム, 親テーブル]
